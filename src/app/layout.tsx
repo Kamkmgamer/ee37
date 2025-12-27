@@ -8,6 +8,11 @@ import { TRPCReactProvider } from "~/trpc/react";
 export const metadata: Metadata = {
   title: "الدفعة ٣٧ | جامعة السودان للعلوم والتكنولوجيا",
   description: "هندسة كهربائية - الدفعة السابعة والثلاثون",
+  openGraph: {
+    images: [
+      "https://cp02bmy0uy.ufs.sh/f/0au6VoLZCTzGdHg7zpcjmLa2sVwTxnlRKGEXucqoZFhv9g31",
+    ],
+  },
 };
 
 const notoKufi = Noto_Kufi_Arabic({
