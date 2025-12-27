@@ -2,7 +2,7 @@
 
 ### Sudan University of Science and Technology
 
-![EE37 Banner](./src/app/opengraph-image.png)
+![EE37 Banner](https://cp02bmy0uy.ufs.sh/f/0au6VoLZCTzGdHg7zpcjmLa2sVwTxnlRKGEXucqoZFhv9g31)
 
 A premium digital platform dedicated to the 37th batch of Electrical Engineering at Sudan University of Science and Technology. This application serves as a central hub for memories, academic resources, and batch documentation, built with a "Golden Blueprint" aesthetic that reflects the prestige of the engineering profession.
 
