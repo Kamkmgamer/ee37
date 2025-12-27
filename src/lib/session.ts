@@ -3,7 +3,7 @@ import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { cookies } from "next/headers";
 import { env } from "~/env";
 
-const key = new TextEncoder().encode(env.JWT_SECRET);
+const key = new TextEncoder().encode(`${env.JWT_SECRET}`);
 
 export async function encrypt(payload: JWTPayload) {
   return new SignJWT(payload)
