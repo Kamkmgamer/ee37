@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: var(--font-noto-kufi), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-ibm-plex), ui-sans-serif, system-ui, sans-serif;
+  
+  /* "Golden Blueprint" Palette */
+  --color-midnight: #0A1628;         /* Deep navy - primary bg */
+  --color-ink: #1A2744;              /* Slightly lighter navy */
+  --color-gold: #D4A853;             /* Warm gold - primary accent */
+  --color-gold-light: #F0D78C;       /* Light gold for highlights */
+  --color-sand: #F5EBD7;             /* Warm cream - text on dark */
+  --color-paper: #FAF7F0;            /* Off-white for light areas */
+  --color-copper: #B87333;           /* Secondary accent */
+  --color-dusty-rose: #C4A4A4;       /* Soft tertiary */
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-midnight);
+  overflow-x: hidden;
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--color-gold);
+  color: var(--color-midnight);
+}
+
+/* Premium Texture Overlay */
+.noise-texture {
+  position: relative;
+}
+.noise-texture::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+/* Subtle Grid Pattern */
+.blueprint-grid {
+  background-image: 
+    linear-gradient(rgba(212, 168, 83, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212, 168, 83, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Golden Glow Effect */
+.golden-glow {
+  box-shadow: 0 0 60px -10px rgba(212, 168, 83, 0.3);
+}
+
+/* Elegant Card Style */
+.elegant-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(250,247,240,0.95) 100%);
+  border: 1px solid rgba(212, 168, 83, 0.15);
+  box-shadow: 
+    0 4px 6px -1px rgba(10, 22, 40, 0.05),
+    0 20px 40px -10px rgba(10, 22, 40, 0.08);
+}
+
+/* Geometric Islamic-inspired pattern */
+.geometric-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30Z' fill='none' stroke='%23D4A853' stroke-width='0.5' opacity='0.1'/%3E%3C/svg%3E");
+  background-size: 30px 30px;
+}
+
+/* Input styling */
+.premium-input {
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid transparent;
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+.premium-input:focus {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 4px rgba(212, 168, 83, 0.15);
+  background: white;
+}
+
+/* Button shimmer effect */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.shimmer-btn {
+  background: linear-gradient(
+    90deg,
+    var(--color-gold) 0%,
+    var(--color-gold-light) 25%,
+    var(--color-gold) 50%,
+    var(--color-gold-light) 75%,
+    var(--color-gold) 100%
+  );
+  background-size: 200% 100%;
+}
+.shimmer-btn:hover {
+  animation: shimmer 2s linear infinite;
+}
