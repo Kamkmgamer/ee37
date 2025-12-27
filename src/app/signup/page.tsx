@@ -34,7 +34,7 @@ export default function SignupPage() {
                 type="text"
                 required
                 className="w-full rounded-lg border border-[#0A1628]/10 bg-[#0A1628]/5 px-4 py-3 text-[#0A1628] focus:ring-2 focus:ring-[#D4A853] focus:outline-none"
-                placeholder="John Doe"
+                placeholder="حاتم سليمان "
               />
               {state?.error?.name && (
                 <p className="mt-1 text-sm text-red-500">{state.error.name}</p>
@@ -72,7 +72,7 @@ export default function SignupPage() {
                 type="email"
                 required
                 className="w-full rounded-lg border border-[#0A1628]/10 bg-[#0A1628]/5 px-4 py-3 text-[#0A1628] focus:ring-2 focus:ring-[#D4A853] focus:outline-none"
-                placeholder="john@example.com"
+                placeholder="Hatim@example.com"
               />
               {state?.error?.email && (
                 <p className="mt-1 text-sm text-red-500">{state.error.email}</p>
