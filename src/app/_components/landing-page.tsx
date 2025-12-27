@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   ChevronLeft,
@@ -95,17 +94,6 @@ export default function LandingPage({ user }: Props) {
             </motion.div>
 
             {/* Main Title */}
-            {/* Main Title - Logo */}
-            <div className="relative mb-8 flex justify-center">
-              <Image
-                src="https://cp02bmy0uy.ufs.sh/f/0au6VoLZCTzGdHg7zpcjmLa2sVwTxnlRKGEXucqoZFhv9g31"
-                alt="EE37 Logo"
-                width={800}
-                height={800}
-                className="h-40 w-auto object-contain drop-shadow-[0_4px_20px_rgba(212,168,83,0.3)] transition-transform duration-500 hover:scale-105 md:h-56"
-                unoptimized
-              />
-            </div>
 
             {/* Subtitle */}
             <p className="mx-auto mb-4 max-w-lg text-xl leading-relaxed text-[var(--color-midnight)]/60 md:text-2xl">
