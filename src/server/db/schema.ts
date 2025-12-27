@@ -40,3 +40,24 @@ export const posts = createTable(
   }),
   (t) => [index("name_idx").on(t.name)],
 );
+
+export const users = createTable(
+  "user",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    name: d.varchar({ length: 256 }).notNull(),
+    collegeId: d.varchar({ length: 12 }).notNull(),
+    email: d.varchar({ length: 256 }).notNull(),
+    password: d.varchar({ length: 256 }).notNull(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("user_college_id_idx").on(t.collegeId),
+    index("user_email_idx").on(t.email),
+  ],
+);
+
