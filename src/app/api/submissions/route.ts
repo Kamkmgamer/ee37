@@ -16,7 +16,7 @@ export async function GET() {
   } catch (error) {
     console.error("Failed to fetch submissions:", error);
     return NextResponse.json(
-      { error: "Failed to fetch submissions" },
+      { error: "فشل في جلب المشاركات" },
       { status: 500 }
     );
   }

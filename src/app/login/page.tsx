@@ -20,23 +20,23 @@ export default function LoginPage() {
           <div className="absolute top-0 left-0 h-1 w-full bg-[#D4A853]" />
 
           <h1 className="mb-2 text-3xl font-bold text-[#0A1628]">
-            Welcome Back
+            مرحباً بعودتك
           </h1>
           <p className="mb-8 text-[#0A1628]/60">
-            Sign in to access your batch memories.
+            سجل الدخول للوصول إلى ذكريات الدفعة.
           </p>
 
           <form action={action} className="space-y-4">
             <div>
               <label className="mb-1 block font-medium text-[#0A1628]">
-                Email or College ID
+                البريد الإلكتروني أو الرقم الجامعي
               </label>
               <input
                 name="identifier"
                 type="text"
                 required
                 className="w-full rounded-lg border border-[#0A1628]/10 bg-[#0A1628]/5 px-4 py-3 text-[#0A1628] focus:ring-2 focus:ring-[#D4A853] focus:outline-none"
-                placeholder="2020... or email"
+                placeholder="2020... أو البريد الإلكتروني"
               />
               {state?.error?.identifier && (
                 <p className="mt-1 text-sm text-red-500">
@@ -47,7 +47,7 @@ export default function LoginPage() {
 
             <div>
               <label className="mb-1 block font-medium text-[#0A1628]">
-                Password
+                كلمة المرور
               </label>
               <input
                 name="password"
@@ -73,17 +73,17 @@ export default function LoginPage() {
               disabled={isPending}
               className="w-full cursor-pointer rounded-lg bg-[#0A1628] py-3 font-bold text-[#D4A853] transition-colors hover:bg-[#0A1628]/90 disabled:opacity-50"
             >
-              {isPending ? "Signing in..." : "Sign In"}
+              {isPending ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-[#0A1628]/60">
-            Don&apos;t have an account?{" "}
+            ليس لديك حساب؟{" "}
             <Link
               href="/signup"
               className="font-bold text-[#D4A853] hover:underline"
             >
-              Sign up
+              أنشئ حساباً
             </Link>
           </p>
         </div>

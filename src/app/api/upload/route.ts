@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     if (!name || !word) {
       return NextResponse.json(
-        { error: "Name and word are required" },
+        { error: "الاسم والكلمة مطلوبان" },
         { status: 400 }
       );
     }
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Submission error:", error);
     return NextResponse.json(
-      { error: "Failed to process submission" },
+      { error: "فشل في معالجة المشاركة" },
       { status: 500 }
     );
   }

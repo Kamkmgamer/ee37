@@ -19,15 +19,15 @@ export default function SignupPage() {
           {/* Decorative blueprint lines */}
           <div className="absolute top-0 left-0 h-1 w-full bg-[#D4A853]" />
 
-          <h1 className="mb-2 text-3xl font-bold text-[#0A1628]">Join EE37</h1>
-          <p className="mb-8 text-[#0A1628]/60">
-            Create your account to join the batch.
-          </p>
+          <h1 className="mb-2 text-3xl font-bold text-[#0A1628]">
+            انضم إلى EE37
+          </h1>
+          <p className="mb-8 text-[#0A1628]/60">أنشئ حسابك للانضمام للدفعة.</p>
 
           <form action={action} className="space-y-4">
             <div>
               <label className="mb-1 block font-medium text-[#0A1628]">
-                Full Name
+                الاسم الكامل
               </label>
               <input
                 name="name"
@@ -43,7 +43,7 @@ export default function SignupPage() {
 
             <div>
               <label className="mb-1 block font-medium text-[#0A1628]">
-                College ID
+                الرقم الجامعي
               </label>
               <input
                 name="collegeId"
@@ -54,7 +54,7 @@ export default function SignupPage() {
                 placeholder="2020..."
               />
               <p className="mt-1 text-xs text-[#0A1628]/40">
-                Must be 12 digits starting with 2018, 2019, or 2020
+                يجب أن يتكون من 12 رقماً ويبدأ بـ 2018، 2019، أو 2020
               </p>
               {state?.error?.collegeId && (
                 <p className="mt-1 text-sm text-red-500">
@@ -65,7 +65,7 @@ export default function SignupPage() {
 
             <div>
               <label className="mb-1 block font-medium text-[#0A1628]">
-                Email
+                البريد الإلكتروني
               </label>
               <input
                 name="email"
@@ -81,7 +81,7 @@ export default function SignupPage() {
 
             <div>
               <label className="mb-1 block font-medium text-[#0A1628]">
-                Password
+                كلمة المرور
               </label>
               <input
                 name="password"
@@ -107,17 +107,17 @@ export default function SignupPage() {
               disabled={isPending}
               className="w-full cursor-pointer rounded-lg bg-[#0A1628] py-3 font-bold text-[#D4A853] transition-colors hover:bg-[#0A1628]/90 disabled:opacity-50"
             >
-              {isPending ? "Creating Account..." : "Create Account"}
+              {isPending ? "جاري إنشاء الحساب..." : "إنشاء الحساب"}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-[#0A1628]/60">
-            Already have an account?{" "}
+            لديك حساب بالفعل؟{" "}
             <Link
               href="/login"
               className="font-bold text-[#D4A853] hover:underline"
             >
-              Sign in
+              تسجيل الدخول
             </Link>
           </p>
         </div>

@@ -10,18 +10,18 @@ import { redirect } from "next/navigation";
 
 
 const signupSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
+  name: z.string().min(2, "الاسم يجب أن يكون حرفين على الأقل"),
   collegeId: z
     .string()
-    .length(12, "College ID must be 12 digits")
-    .regex(/^(2018|2019|2020)/, "College ID must start with 2018, 2019, or 2020"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+    .length(12, "الرقم الجامعي يجب أن يكون 12 رقماً")
+    .regex(/^(2018|2019|2020)/, "الرقم الجامعي يجب أن يبدأ بـ 2018، 2019، أو 2020"),
+  email: z.string().email("البريد الإلكتروني غير صحيح"),
+  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
 });
 
 const loginSchema = z.object({
-  identifier: z.string().min(1, "Email or College ID is required"),
-  password: z.string().min(1, "Password is required"),
+  identifier: z.string().min(1, "البريد الإلكتروني أو الرقم الجامعي مطلوب"),
+  password: z.string().min(1, "كلمة المرور مطلوبة"),
 });
 
 type AuthState = {
@@ -55,7 +55,7 @@ export async function signup(prevState: AuthState | null, formData: FormData): P
   if (existingUser) {
     return {
       error: {
-        form: "User with this email or college ID already exists",
+        form: "مستخدم بهذا البريد الإلكتروني أو الرقم الجامعي موجود بالفعل",
       },
     };
   }
@@ -73,7 +73,7 @@ export async function signup(prevState: AuthState | null, formData: FormData): P
     .returning();
 
   if (!newUser) {
-     return { error: { form: "Failed to create user" } };
+     return { error: { form: "فشل إنشاء المستخدم" } };
   }
 
   await createSession({
@@ -108,7 +108,7 @@ export async function login(prevState: AuthState | null, formData: FormData): Pr
   if (!user || !(await comparePassword(password, user.password))) {
     return {
       error: {
-        form: "Invalid credentials",
+        form: "بيانات الدخول غير صحيحة",
       },
     };
   }
