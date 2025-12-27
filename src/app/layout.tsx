@@ -4,6 +4,8 @@ import { type Metadata } from "next";
 import { IBM_Plex_Sans_Arabic, Noto_Kufi_Arabic } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/react";
+import { ChatWidget } from "./_components/ChatWidget";
+import { verifySession } from "~/lib/session";
 
 export const metadata: Metadata = {
   title: "الدفعة ٣٧ | جامعة السودان للعلوم والتكنولوجيا",
@@ -27,9 +29,10 @@ const ibmPlexArabic = IBM_Plex_Sans_Arabic({
   variable: "--font-ibm-plex",
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const session = await verifySession();
   return (
     <html
       lang="ar"
@@ -37,7 +40,10 @@ export default function RootLayout({
       className={`${notoKufi.variable} ${ibmPlexArabic.variable}`}
     >
       <body className="font-sans antialiased">
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          {children}
+          {session && <ChatWidget />}
+        </TRPCReactProvider>
       </body>
     </html>
   );
