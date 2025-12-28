@@ -145,13 +145,13 @@ export function ChatWidget() {
             </div>
 
             {/* Input */}
-            <div className="border-t border-[#D4AF37]/10 bg-[#0F0F0F] p-4">
-              <form onSubmit={handleSubmit} className="flex gap-2">
+            <div className="border-t border-[#D4AF37]/10 bg-[#0F0F0F] px-3 py-4">
+              <form onSubmit={handleSubmit} className="flex gap-1.5">
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="اكتب رسالتك..."
-                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-[#EAEAEA] placeholder:text-[#A0A0A0] focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 focus:outline-none"
+                  className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-[#EAEAEA] placeholder:text-[#A0A0A0] focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 focus:outline-none"
                   dir="auto"
                 />
                 <button
