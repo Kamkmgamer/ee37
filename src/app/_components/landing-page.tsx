@@ -99,7 +99,7 @@ export default function LandingPage({
         </header>
 
         {/* Hero Section */}
-        <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+        <div className="flex w-full flex-1 flex-col items-center justify-center px-4 py-12 sm:px-10">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -142,7 +142,7 @@ export default function LandingPage({
 
           {/* Feed Preview Section */}
           {user && posts.length > 0 && (
-            <div className="mt-16">
+            <div className="mt-16 w-full max-w-xl">
               <FeedPreview
                 posts={posts}
                 currentUserId={user.userId}
@@ -266,6 +266,32 @@ export default function LandingPage({
                     </h3>
                     <p className="text-[var(--color-midnight)]/50">
                       المحاضرات والمراجع
+                    </p>
+                  </div>
+                  <ChevronLeft
+                    size={24}
+                    className="-translate-x-4 text-[var(--color-gold)] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+                  />
+                </div>
+              </div>
+            </Link>
+
+            {/* Chat Card */}
+            <Link href="/chat" className="group block">
+              <div className="elegant-card relative overflow-hidden rounded-3xl p-6 transition-all duration-500 hover:shadow-[var(--color-gold)]/10 hover:shadow-2xl md:p-8">
+                <div className="flex items-center gap-6">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-[var(--color-midnight)]/10 text-[var(--color-midnight)]/60 transition-all duration-500 group-hover:border-[var(--color-gold)] group-hover:text-[var(--color-gold)]">
+                    <MessageSquare size={28} />
+                  </div>
+                  <div className="flex-1">
+                    <h3
+                      className="mb-1 text-2xl font-bold text-[var(--color-midnight)]"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      المحادثات
+                    </h3>
+                    <p className="text-[var(--color-midnight)]/50">
+                      تواصل مع زملائك
                     </p>
                   </div>
                   <ChevronLeft

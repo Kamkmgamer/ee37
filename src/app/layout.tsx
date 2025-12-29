@@ -42,7 +42,7 @@ export default async function RootLayout({
       <body className="font-sans antialiased" suppressHydrationWarning>
         <TRPCReactProvider>
           {children}
-          {session && <ChatWidget />}
+          {session && <ChatWidget userId={session.userId} />}
         </TRPCReactProvider>
       </body>
     </html>
