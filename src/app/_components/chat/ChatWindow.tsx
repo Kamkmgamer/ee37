@@ -5,12 +5,12 @@ import { MessageCircle, Phone, Video, Info, ArrowRight } from "lucide-react";
 import { api } from "~/trpc/react";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
-import { useRef, useEffect } from "react";
+import { MessageContextMenu } from "./MessageContextMenu";
+import { useRef, useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ForwardDialog } from "./ForwardDialog";
-import { useState } from "react";
-import type { Message } from "./types";
+import type { Message, MessageReaction } from "./types";
 
 interface ChatWindowProps {
   currentUserId: string;
@@ -28,6 +28,16 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
     null,
   );
   const [isForwardDialogOpen, setIsForwardDialogOpen] = useState(false);
+
+  // Context menu state
+  const [contextMenuMessage, setContextMenuMessage] = useState<Message | null>(
+    null,
+  );
+  const [contextMenuPosition, setContextMenuPosition] = useState({
+    x: 0,
+    y: 0,
+  });
+  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 
   const utils = api.useUtils();
 
@@ -67,8 +77,157 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
     },
   });
 
+  // Optimistic reaction mutation
   const reactMutation = api.chat.react.useMutation({
-    onSuccess: () => {
+    onMutate: async ({ messageId, type }) => {
+      // Cancel any outgoing refetches
+      await utils.chat.getMessages.cancel({ conversationId: conversationId! });
+
+      // Snapshot previous value
+      const previousMessages = utils.chat.getMessages.getData({
+        conversationId: conversationId!,
+      });
+
+      // Optimistically update
+      utils.chat.getMessages.setData(
+        { conversationId: conversationId! },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            messages: old.messages.map((msg) => {
+              if (msg.id !== messageId) return msg;
+
+              const existingReaction = msg.reactions.find(
+                (r) => r.userId === currentUserId,
+              );
+
+              let newReactions: MessageReaction[];
+              if (existingReaction) {
+                if (existingReaction.reactionType === type) {
+                  // Remove reaction
+                  newReactions = msg.reactions.filter(
+                    (r) => r.userId !== currentUserId,
+                  );
+                } else {
+                  // Update reaction
+                  newReactions = msg.reactions.map((r) =>
+                    r.userId === currentUserId
+                      ? {
+                          ...r,
+                          reactionType: type,
+                        }
+                      : r,
+                  ) as MessageReaction[];
+                }
+              } else {
+                // Add new reaction
+                newReactions = [
+                  ...msg.reactions,
+                  {
+                    id: `temp-${Date.now()}`,
+                    userId: currentUserId,
+                    messageId,
+                    reactionType: type,
+                    createdAt: new Date(),
+                  } as MessageReaction,
+                ];
+              }
+
+              return { ...msg, reactions: newReactions };
+            }),
+          };
+        },
+      );
+
+      return { previousMessages };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousMessages) {
+        utils.chat.getMessages.setData(
+          { conversationId: conversationId! },
+          context.previousMessages,
+        );
+      }
+    },
+    onSettled: () => {
+      void utils.chat.getMessages.invalidate({
+        conversationId: conversationId!,
+      });
+    },
+  });
+
+  // Optimistic delete for me mutation
+  const deleteForMeMutation = api.chat.deleteMessageForMe.useMutation({
+    onMutate: async ({ messageId }) => {
+      await utils.chat.getMessages.cancel({ conversationId: conversationId! });
+
+      const previousMessages = utils.chat.getMessages.getData({
+        conversationId: conversationId!,
+      });
+
+      // Optimistically remove the message from the list
+      utils.chat.getMessages.setData(
+        { conversationId: conversationId! },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            messages: old.messages.filter((msg) => msg.id !== messageId),
+          };
+        },
+      );
+
+      return { previousMessages };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousMessages) {
+        utils.chat.getMessages.setData(
+          { conversationId: conversationId! },
+          context.previousMessages,
+        );
+      }
+    },
+    onSettled: () => {
+      void utils.chat.getMessages.invalidate({
+        conversationId: conversationId!,
+      });
+    },
+  });
+
+  // Optimistic delete for all mutation
+  const deleteForAllMutation = api.chat.deleteMessageForAll.useMutation({
+    onMutate: async ({ messageId }) => {
+      await utils.chat.getMessages.cancel({ conversationId: conversationId! });
+
+      const previousMessages = utils.chat.getMessages.getData({
+        conversationId: conversationId!,
+      });
+
+      // Optimistically remove the message from the list
+      utils.chat.getMessages.setData(
+        { conversationId: conversationId! },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            messages: old.messages.filter((msg) => msg.id !== messageId),
+          };
+        },
+      );
+
+      return { previousMessages };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousMessages) {
+        utils.chat.getMessages.setData(
+          { conversationId: conversationId! },
+          context.previousMessages,
+        );
+      }
+    },
+    onSettled: () => {
       void utils.chat.getMessages.invalidate({
         conversationId: conversationId!,
       });
@@ -81,6 +240,22 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messagesData?.messages.length, conversationId]);
+
+  // Handle context menu open
+  const handleContextMenu = useCallback(
+    (message: Message, position: { x: number; y: number }) => {
+      setContextMenuMessage(message);
+      setContextMenuPosition(position);
+      setIsContextMenuOpen(true);
+    },
+    [],
+  );
+
+  // Handle context menu close
+  const handleCloseContextMenu = useCallback(() => {
+    setIsContextMenuOpen(false);
+    setContextMenuMessage(null);
+  }, []);
 
   if (!conversationId) {
     return (
@@ -152,7 +327,6 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
 
     setIsForwardDialogOpen(false);
     setForwardingMessage(null);
-    alert("تم توجيه الرسالة بنجاح");
   };
 
   const handleReact = (messageId: string, type: string) => {
@@ -167,6 +341,14 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
         | "wow"
         | "sad",
     });
+  };
+
+  const handleDeleteForMe = (messageId: string) => {
+    deleteForMeMutation.mutate({ messageId });
+  };
+
+  const handleDeleteForAll = (messageId: string) => {
+    deleteForAllMutation.mutate({ messageId });
   };
 
   return (
@@ -271,6 +453,7 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
                   onForward={handleForward}
                   onReact={handleReact}
                   onEdit={setEditingMessage}
+                  onContextMenu={handleContextMenu}
                 />
               );
             })}
@@ -278,6 +461,20 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
           </div>
         )}
       </div>
+
+      {/* Context Menu */}
+      <MessageContextMenu
+        message={contextMenuMessage}
+        isOpen={isContextMenuOpen}
+        position={contextMenuPosition}
+        isMe={contextMenuMessage?.senderId === currentUserId}
+        onClose={handleCloseContextMenu}
+        onReply={setReplyingTo}
+        onForward={handleForward}
+        onReact={handleReact}
+        onDeleteForMe={handleDeleteForMe}
+        onDeleteForAll={handleDeleteForAll}
+      />
 
       <ForwardDialog
         isOpen={isForwardDialogOpen}

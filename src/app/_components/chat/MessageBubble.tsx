@@ -1,18 +1,11 @@
 "use client";
 
+import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { format } from "date-fns";
 import { arMA } from "date-fns/locale";
-import {
-  CheckCheck,
-  PlayCircle,
-  Reply,
-  ArrowRight,
-  ArrowLeft,
-  Smile,
-  Edit2,
-} from "lucide-react";
+import { CheckCheck, PlayCircle, ArrowRight } from "lucide-react";
 import { REACTION_ICONS, type ReactionType } from "../icons/ReactionIcons";
 import { motion, type PanInfo, useAnimation } from "framer-motion";
 import type { Message } from "./types";
@@ -26,6 +19,10 @@ interface MessageBubbleProps {
   onForward?: (message: Message) => void;
   onReact?: (messageId: string, type: string) => void;
   onEdit?: (message: Message) => void;
+  onContextMenu?: (
+    message: Message,
+    position: { x: number; y: number },
+  ) => void;
 }
 
 export function MessageBubble({
@@ -35,10 +32,11 @@ export function MessageBubble({
   className,
   onReply,
   onForward,
-  onReact,
-  onEdit,
+  onContextMenu,
 }: MessageBubbleProps) {
   const controls = useAnimation();
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const [isPressed, setIsPressed] = useState(false);
 
   const handleDragEnd = async (_: unknown, info: PanInfo) => {
     const offset = info.offset.x;
@@ -49,6 +47,55 @@ export function MessageBubble({
     }
     await controls.start({ x: 0 });
   };
+
+  // Handle right-click context menu
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onContextMenu?.(message, { x: e.clientX, y: e.clientY });
+    },
+    [message, onContextMenu],
+  );
+
+  // Handle touch start for long-press
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+
+      setIsPressed(true);
+      const position = { x: touch.clientX, y: touch.clientY };
+
+      longPressTimer.current = setTimeout(() => {
+        // Trigger haptic feedback if available
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+        onContextMenu?.(message, position);
+        setIsPressed(false);
+      }, 500); // 500ms long press
+    },
+    [message, onContextMenu],
+  );
+
+  // Handle touch end - cancel long-press
+  const handleTouchEnd = useCallback(() => {
+    setIsPressed(false);
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  // Handle touch move - cancel long-press if moved
+  const handleTouchMove = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+      setIsPressed(false);
+    }
+  }, []);
 
   return (
     <div
@@ -109,11 +156,15 @@ export function MessageBubble({
           dragElastic={0.2}
           onDragEnd={handleDragEnd}
           animate={controls}
-          className={`relative overflow-hidden rounded-2xl px-4 py-2 text-sm shadow-sm ${
+          onContextMenu={handleContextMenu}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchMove={handleTouchMove}
+          className={`relative cursor-pointer overflow-hidden rounded-2xl px-4 py-2 text-sm shadow-sm transition-transform select-none ${
             isMe
               ? "rounded-br-none bg-[#D4AF37] text-black"
               : "rounded-bl-none bg-white/10 text-[#EAEAEA]"
-          }`}
+          } ${isPressed ? "scale-95 opacity-90" : ""}`}
         >
           {/* Forwarded Label */}
           {message.isForwarded && (
@@ -216,62 +267,6 @@ export function MessageBubble({
             {isMe && <CheckCheck size={12} />}
           </div>
         </motion.div>
-
-        {/* Reactions & Actions */}
-        <div className="flex items-center gap-2 text-white/40">
-          {/* Reaction Button */}
-          <div className="group/reactions relative">
-            <button className="hidden rounded-full p-1 group-hover:block hover:bg-white/10">
-              <Smile size={16} />
-            </button>
-            {/* Hover Picker - simplified */}
-            <div className="absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 gap-1 rounded-full border border-white/10 bg-[#1A1A1A] p-2 shadow-xl backdrop-blur-md group-hover/reactions:flex">
-              {(
-                Object.entries(REACTION_ICONS) as [
-                  ReactionType,
-                  (typeof REACTION_ICONS)[ReactionType],
-                ][]
-              ).map(([type, { Icon, color }]) => (
-                <button
-                  key={type}
-                  onClick={() => onReact?.(message.id, type)}
-                  className="group/icon relative p-1 transition-transform hover:scale-125"
-                >
-                  <Icon size={20} className={color} />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button
-            onClick={() => onReply?.(message)}
-            className="hidden rounded-full p-1 group-hover:block hover:bg-white/10"
-            title="رد"
-          >
-            <Reply size={16} />
-          </button>
-
-          <button
-            onClick={() => onForward?.(message)}
-            className="hidden rounded-full p-1 group-hover:block hover:bg-white/10"
-            title="توجيه"
-          >
-            <ArrowLeft size={16} />
-          </button>
-
-          {isMe && (
-            <button
-              onClick={() => {
-                // Simple prompt for now, essentially triggering edit mode in parent
-                onEdit?.(message);
-              }}
-              className="hidden rounded-full p-1 group-hover:block hover:bg-white/10"
-              title="تعديل"
-            >
-              <Edit2 size={16} />
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );

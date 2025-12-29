@@ -409,13 +409,18 @@ export const chatRouter = createTRPCRouter({
         throw new TRPCError({ code: "FORBIDDEN", message: "Not a participant" });
       }
 
-      // Build cursor condition
+      const baseConditions = and(
+        eq(messages.conversationId, conversationId),
+        sql`${messages.deletedAt} IS NULL`,
+        sql`NOT (${messages.deletedForUserIds}::uuid[] @> ARRAY[${currentUserId}]::uuid[])`
+      );
+      
       const conditions = cursor
         ? and(
-            eq(messages.conversationId, conversationId),
+            baseConditions,
             sql`${messages.createdAt} < (SELECT created_at FROM ${messages} WHERE id = ${cursor})`
           )
-        : eq(messages.conversationId, conversationId);
+        : baseConditions;
 
       const msgs = await ctx.db
         .select({
@@ -428,6 +433,7 @@ export const chatRouter = createTRPCRouter({
           replyToId: messages.replyToId,
           isForwarded: messages.isForwarded,
           updatedAt: messages.updatedAt,
+          deletedAt: messages.deletedAt,
         })
         .from(messages)
         .innerJoin(users, eq(messages.senderId, users.id))
@@ -677,6 +683,77 @@ export const chatRouter = createTRPCRouter({
       await ctx.db
         .update(messages)
         .set({ content, updatedAt: new Date() })
+        .where(eq(messages.id, messageId));
+
+      return { success: true };
+    }),
+
+  // Delete Message for Me (soft delete for current user only)
+  deleteMessageForMe: protectedProcedure
+    .input(z.object({
+      messageId: z.string().uuid(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { messageId } = input;
+      const currentUserId = ctx.session.user.id;
+
+      // Check message exists
+      const [msg] = await ctx.db
+        .select()
+        .from(messages)
+        .where(eq(messages.id, messageId));
+
+      if (!msg) throw new TRPCError({ code: "NOT_FOUND" });
+
+      // Verify user is participant in the conversation
+      const [participation] = await ctx.db
+        .select()
+        .from(conversationParticipants)
+        .where(and(
+          eq(conversationParticipants.conversationId, msg.conversationId),
+          eq(conversationParticipants.userId, currentUserId)
+        ));
+
+      if (!participation) throw new TRPCError({ code: "FORBIDDEN" });
+
+      // Add user to deleted for list (using uuid array column)
+      const currentDeletedFor: string[] = msg.deletedForUserIds ?? [];
+      if (!currentDeletedFor.includes(currentUserId)) {
+        await ctx.db
+          .update(messages)
+          .set({ 
+            deletedForUserIds: [...currentDeletedFor, currentUserId],
+            updatedAt: new Date() 
+          })
+          .where(eq(messages.id, messageId));
+      }
+
+      return { success: true };
+    }),
+
+  // Delete Message for Everyone (only sender can do this)
+  deleteMessageForAll: protectedProcedure
+    .input(z.object({
+      messageId: z.string().uuid(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { messageId } = input;
+      const currentUserId = ctx.session.user.id;
+
+      const [msg] = await ctx.db
+        .select()
+        .from(messages)
+        .where(eq(messages.id, messageId));
+
+      if (!msg) throw new TRPCError({ code: "NOT_FOUND" });
+      if (msg.senderId !== currentUserId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only the sender can delete for everyone" });
+      }
+
+      // Soft delete for all using deletedAt timestamp
+      await ctx.db
+        .update(messages)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
         .where(eq(messages.id, messageId));
 
       return { success: true };

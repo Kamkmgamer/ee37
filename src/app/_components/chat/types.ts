@@ -24,6 +24,7 @@ export interface Message {
   content: string | null;
   createdAt: Date;
   updatedAt: Date | null;
+  deletedAt?: Date | null;
   senderId: string;
   senderName: string | null;
   senderAvatar: string | null;

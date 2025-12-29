@@ -253,13 +253,14 @@ export const messages = createTable(
     id: d.uuid().primaryKey().defaultRandom(),
     conversationId: d.uuid().notNull().references(() => conversations.id, { onDelete: "cascade" }),
     senderId: d.uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
-    content: d.text(), // Nullable - can be null if only media
+    content: d.text(),
     createdAt: d
       .timestamp({ withTimezone: true })
       .$defaultFn(() => new Date())
       .notNull(),
     updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
-    deletedAt: d.timestamp({ withTimezone: true }), // Soft delete
+    deletedAt: d.timestamp({ withTimezone: true }),
+    deletedForUserIds: d.uuid().array().default([]),
     replyToId: d.uuid().references((): AnyPgColumn => messages.id, { onDelete: "set null" }),
     isForwarded: d.boolean().default(false).notNull(),
   }),
@@ -270,7 +271,6 @@ export const messages = createTable(
   ],
 );
 
-// Message Media Table - Images and videos in messages
 export const messageMedia = createTable(
   "message_media",
   (d) => ({
@@ -287,7 +287,6 @@ export const messageMedia = createTable(
   (t) => [index("message_media_message_idx").on(t.messageId)],
 );
 
-// Message Reactions Table
 export const messageReactions = createTable(
   "message_reaction",
   (d) => ({
