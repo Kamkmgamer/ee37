@@ -3,10 +3,19 @@ import type { NextRequest } from "next/server";
 import { decrypt } from "./lib/session";
 
 const publicRoutes = ["/", "/login", "/signup"];
+const publicPrefixes = ["/profile/"]; // Allow viewing any public profile
+
+function isPublicPath(path: string): boolean {
+  if (publicRoutes.includes(path)) return true;
+  for (const prefix of publicPrefixes) {
+    if (path.startsWith(prefix) && path !== "/profile/edit") return true;
+  }
+  return false;
+}
 
 export default async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
-  const isPublicRoute = publicRoutes.includes(path);
+  const isPublicRoute = isPublicPath(path);
 
   const cookie = req.cookies.get("session")?.value;
   const session = await decrypt(cookie);

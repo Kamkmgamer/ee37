@@ -39,7 +39,7 @@ export default async function RootLayout({
       dir="rtl"
       className={`${notoKufi.variable} ${ibmPlexArabic.variable}`}
     >
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <TRPCReactProvider>
           {children}
           {session && <ChatWidget />}

@@ -9,8 +9,34 @@ import {
   GraduationCap,
   LogOut,
   User,
+  MessageSquare,
 } from "lucide-react";
 import { logout } from "../actions/auth";
+import { FeedPreview } from "./feed/FeedPreview";
+
+interface PostMedia {
+  id: string;
+  mediaUrl: string;
+  mediaType: "image" | "video";
+  order: number;
+}
+
+interface PostReaction {
+  postId: string;
+  reactionType: string;
+  count: number;
+}
+
+interface Post {
+  id: string;
+  content: string;
+  createdAt: Date;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string | null;
+  media: PostMedia[];
+  reactions: PostReaction[];
+}
 
 type Props = {
   user: {
@@ -18,9 +44,15 @@ type Props = {
     email: string;
     name: string;
   } | null;
+  posts?: Post[];
+  userReactions?: Record<string, string>;
 };
 
-export default function LandingPage({ user }: Props) {
+export default function LandingPage({
+  user,
+  posts = [],
+  userReactions = {},
+}: Props) {
   return (
     <main
       className="noise-texture relative min-h-screen overflow-hidden bg-[var(--color-paper)]"
@@ -108,6 +140,17 @@ export default function LandingPage({ user }: Props) {
             </div>
           </motion.div>
 
+          {/* Feed Preview Section */}
+          {user && posts.length > 0 && (
+            <div className="mt-16">
+              <FeedPreview
+                posts={posts}
+                currentUserId={user.userId}
+                userReactions={userReactions}
+              />
+            </div>
+          )}
+
           {/* Navigation Cards */}
           <motion.div
             initial={{ opacity: 0, y: 60 }}
@@ -115,6 +158,32 @@ export default function LandingPage({ user }: Props) {
             transition={{ delay: 0.6, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="mt-16 w-full max-w-xl space-y-4"
           >
+            {/* Feed Card - Primary */}
+            <Link href="/feed" className="group block">
+              <div className="elegant-card relative overflow-hidden rounded-3xl p-6 transition-all duration-500 hover:shadow-[var(--color-gold)]/10 hover:shadow-2xl md:p-8">
+                <div className="flex items-center gap-6">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-gold)] to-[var(--color-copper)] text-white shadow-[var(--color-gold)]/30 shadow-lg transition-transform duration-500 group-hover:scale-110">
+                    <MessageSquare size={28} />
+                  </div>
+                  <div className="flex-1">
+                    <h3
+                      className="mb-1 text-2xl font-bold text-[var(--color-midnight)]"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      المنشورات
+                    </h3>
+                    <p className="text-[var(--color-midnight)]/50">
+                      تابع آخر الأخبار والمنشورات
+                    </p>
+                  </div>
+                  <ChevronLeft
+                    size={24}
+                    className="-translate-x-4 text-[var(--color-gold)] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+                  />
+                </div>
+              </div>
+            </Link>
+
             {/* Survey Card - Primary */}
             <Link href="/survey" className="group block">
               <div className="elegant-card relative overflow-hidden rounded-3xl p-6 transition-all duration-500 hover:shadow-[var(--color-gold)]/10 hover:shadow-2xl md:p-8">
