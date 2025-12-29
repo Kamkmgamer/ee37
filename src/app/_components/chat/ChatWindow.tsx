@@ -54,13 +54,72 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
       { conversationId: conversationId! },
       {
         enabled: !!conversationId,
-        refetchInterval: 3000, // Poll every 3 seconds
+        refetchInterval: 3000,
       },
     );
 
   const sendMessageMutation = api.chat.sendMessage.useMutation({
-    onSuccess: () => {
+    onMutate: async (newMessage) => {
+      await utils.chat.getMessages.cancel({ conversationId: conversationId! });
+
+      const previousMessages = utils.chat.getMessages.getData({
+        conversationId: conversationId!,
+      });
+
+      const optimisticMessage = {
+        id: `temp-${Date.now()}`,
+        content: newMessage.content ?? null,
+        createdAt: new Date(),
+        updatedAt: null,
+        senderId: currentUserId,
+        senderName: "أنت",
+        senderAvatar: null,
+        replyToId: newMessage.replyToId ?? null,
+        isForwarded: newMessage.isForwarded ?? false,
+        deletedAt: null,
+        deletedForUserIds: [],
+        media: (newMessage.mediaUrls ?? []).map((m, i) => ({
+          id: `temp-media-${i}`,
+          mediaUrl: m.url,
+          mediaType: m.type,
+          createdAt: new Date(),
+          order: i,
+          messageId: `temp-${Date.now()}`,
+        })),
+        reactions: [],
+        replyTo: replyingTo
+          ? {
+              id: replyingTo.id,
+              content: replyingTo.content,
+              senderName: replyingTo.senderName,
+            }
+          : null,
+      };
+
+      utils.chat.getMessages.setData(
+        { conversationId: conversationId! },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            messages: [...old.messages, optimisticMessage],
+          };
+        },
+      );
+
       setReplyingTo(null);
+
+      return { previousMessages };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousMessages) {
+        utils.chat.getMessages.setData(
+          { conversationId: conversationId! },
+          context.previousMessages,
+        );
+      }
+    },
+    onSettled: () => {
       void utils.chat.getMessages.invalidate({
         conversationId: conversationId!,
       });
