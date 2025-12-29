@@ -4,7 +4,7 @@ import { type Metadata } from "next";
 import { IBM_Plex_Sans_Arabic, Noto_Kufi_Arabic } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/react";
-import { ChatWidget } from "./_components/ChatWidget";
+import { ChatWidgetWrapper } from "./_components/ChatWidgetWrapper";
 import { verifySession } from "~/lib/session";
 
 export const metadata: Metadata = {
@@ -42,7 +42,7 @@ export default async function RootLayout({
       <body className="font-sans antialiased" suppressHydrationWarning>
         <TRPCReactProvider>
           {children}
-          {session && <ChatWidget userId={session.userId} />}
+          {session && <ChatWidgetWrapper userId={session.userId} />}
         </TRPCReactProvider>
       </body>
     </html>
