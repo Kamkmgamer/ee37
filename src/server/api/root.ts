@@ -10,6 +10,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
  * All routers added in /api/routers should be manually added here.
  */
 import { commentsRouter } from "~/server/api/routers/comments";
+import { chatRouter } from "~/server/api/routers/chat";
 
 /**
  * This is the primary router for your server.
@@ -22,6 +23,7 @@ export const appRouter = createTRPCRouter({
   feed: feedRouter,
   reactions: reactionsRouter,
   comments: commentsRouter,
+  chat: chatRouter,
 });
 
 // export type definition of API
