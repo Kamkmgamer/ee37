@@ -62,7 +62,7 @@ export function CommentItem({
 
   if (comment.reactions) {
     for (const r of comment.reactions) {
-      reactionsObj[r.reactionType] = (reactionsObj[r.reactionType] || 0) + 1;
+      reactionsObj[r.reactionType] = (reactionsObj[r.reactionType] ?? 0) + 1;
       if (r.userId === currentUserId) {
         userReaction = r.reactionType;
       }
