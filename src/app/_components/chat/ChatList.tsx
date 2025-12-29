@@ -2,16 +2,19 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
-import { Search, Plus, Users, User, ArrowRight } from "lucide-react";
+import { Search, Plus, Users, User, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { ConversationItem } from "./ConversationItem";
 import { NewChatDialog } from "./NewChatDialog";
+import { AI_USER_ID } from "~/lib/constants";
+import { useRouter } from "next/navigation";
 
 interface ChatListProps {
   userId: string;
 }
 
 export function ChatList({ userId }: ChatListProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"all" | "private" | "group">(
     "all",
   );
@@ -21,6 +24,19 @@ export function ChatList({ userId }: ChatListProps) {
   const { data, isLoading } = api.chat.getConversations.useQuery({
     limit: 20,
   });
+
+  const createConversationMutation = api.chat.createConversation.useMutation({
+    onSuccess: (data) => {
+      router.push(`/chat?c=${data.conversationId}`);
+    },
+  });
+
+  const handleStartAIChat = () => {
+    createConversationMutation.mutate({
+      type: "private",
+      participantIds: [AI_USER_ID],
+    });
+  };
 
   const conversations = data?.conversations ?? [];
 
@@ -118,6 +134,29 @@ export function ChatList({ userId }: ChatListProps) {
         >
           <Users size={12} />
           مجموعات
+        </button>
+      </div>
+
+      {/* AI Bot Quick Access */}
+      <div className="px-3 pb-3">
+        <button
+          onClick={handleStartAIChat}
+          disabled={createConversationMutation.isPending}
+          className="group flex w-full items-center gap-3 rounded-xl border border-[#D4AF37]/30 bg-[#D4AF37]/5 p-3 transition-all hover:bg-[#D4AF37]/10"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#D4AF37] text-black shadow-[0_0_15px_rgba(212,175,55,0.3)] transition-transform group-hover:scale-110">
+            <Sparkles size={20} />
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-bold text-[#EAEAEA]">
+              مساعد الدفعة الذكي
+            </p>
+            <p className="text-[10px] text-[#A0A0A0]">
+              {createConversationMutation.isPending
+                ? "جاري التحميل..."
+                : "اسأل أي سؤال عن الدفعة أو المواد"}
+            </p>
+          </div>
         </button>
       </div>
 

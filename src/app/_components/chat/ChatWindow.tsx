@@ -234,14 +234,24 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
     },
   });
 
-  // Scroll to bottom on new messages
+  const markAsReadMutation = api.chat.markAsRead.useMutation({
+    onSuccess: () => {
+      void utils.chat.getConversations.invalidate();
+    },
+  });
+
+  useEffect(() => {
+    if (conversationId && messagesData?.messages.length) {
+      markAsReadMutation.mutate({ conversationId });
+    }
+  }, [conversationId, messagesData?.messages.length]);
+
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messagesData?.messages.length, conversationId]);
 
-  // Handle context menu open
   const handleContextMenu = useCallback(
     (message: Message, position: { x: number; y: number }) => {
       setContextMenuMessage(message);
@@ -251,7 +261,6 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
     [],
   );
 
-  // Handle context menu close
   const handleCloseContextMenu = useCallback(() => {
     setIsContextMenuOpen(false);
     setContextMenuMessage(null);

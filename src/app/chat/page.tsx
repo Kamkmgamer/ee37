@@ -17,7 +17,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   const activeConversationId = (await searchParams).c;
 
   return (
-    <div className="flex h-screen w-full bg-[#0F0F0F] pt-20">
+    <div className="chat-page-container flex h-screen w-full bg-[#0F0F0F] pt-20">
       <div className="container mx-auto flex h-[calc(100vh-6rem)] max-w-7xl gap-4 overflow-hidden p-4">
         {/* Chat List Sidebar */}
         <div
