@@ -10,6 +10,7 @@ interface Submission {
   word: string;
   imageUrl: string | null;
   createdAt: string;
+  userId: string | null;
 }
 
 // Generate organic transforms for each card
@@ -357,12 +358,23 @@ export default function GalleryPage() {
                       {selectedCard.word}
                     </span>
                   </div>
-                  <h3
-                    className="mb-2 text-2xl font-bold text-[var(--color-midnight)]"
-                    style={{ fontFamily: "var(--font-display)" }}
-                  >
-                    {selectedCard.name}
-                  </h3>
+                  {selectedCard.userId ? (
+                    <Link href={`/profile/${selectedCard.userId}`}>
+                      <h3
+                        className="mb-2 cursor-pointer text-2xl font-bold text-[var(--color-midnight)] transition-colors hover:text-[var(--color-gold)]"
+                        style={{ fontFamily: "var(--font-display)" }}
+                      >
+                        {selectedCard.name}
+                      </h3>
+                    </Link>
+                  ) : (
+                    <h3
+                      className="mb-2 text-2xl font-bold text-[var(--color-midnight)]"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      {selectedCard.name}
+                    </h3>
+                  )}
                   <p className="text-sm text-[var(--color-midnight)]/40">
                     {new Date(selectedCard.createdAt).toLocaleDateString(
                       "ar-SD",

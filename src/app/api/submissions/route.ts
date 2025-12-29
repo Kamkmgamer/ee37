@@ -8,7 +8,14 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const allSubmissions = await db
-      .select()
+      .select({
+        id: submissions.id,
+        name: submissions.name,
+        word: submissions.word,
+        imageUrl: submissions.imageUrl,
+        createdAt: submissions.createdAt,
+        userId: submissions.userId,
+      })
       .from(submissions)
       .orderBy(desc(submissions.createdAt));
 

@@ -2,8 +2,13 @@ import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { submissions } from "~/server/db/schema";
 
+import { verifySession } from "~/lib/session";
+
 export async function POST(request: NextRequest) {
   try {
+    const session = await verifySession();
+    const userId = session?.userId ?? null;
+
     const body = await request.json() as {
       name: string;
       word: string;
@@ -27,6 +32,7 @@ export async function POST(request: NextRequest) {
         word,
         imageUrl: imageUrl ?? null,
         imageName: imageUrl ? imageUrl.split("/").pop() ?? null : null,
+        userId,
       })
       .returning();
 
