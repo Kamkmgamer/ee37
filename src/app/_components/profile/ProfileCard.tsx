@@ -1,9 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { MapPin, Globe, Calendar, Edit2 } from "lucide-react";
+import { MapPin, Globe, Calendar, Edit2, MessageCircle } from "lucide-react";
+import { api } from "~/trpc/react";
 
 interface ProfileCardProps {
   profile: {
@@ -31,6 +33,20 @@ export function ProfileCard({
     year: "numeric",
     month: "long",
   });
+
+  const router = useRouter();
+  const createConversationMutation = api.chat.createConversation.useMutation({
+    onSuccess: (data) => {
+      router.push(`/chat?c=${data.conversationId}`);
+    },
+  });
+
+  const handleMessage = () => {
+    createConversationMutation.mutate({
+      type: "private",
+      participantIds: [profile.userId],
+    });
+  };
 
   return (
     <motion.div
@@ -71,17 +87,32 @@ export function ProfileCard({
           </div>
 
           {/* Edit button for own profile */}
-          {isOwnProfile && (
-            <Link href="/profile/edit">
+          <div className="flex gap-2">
+            {!isOwnProfile && (
               <motion.button
-                className="bg-gold text-midnight hover:bg-gold-light flex items-center gap-2 rounded-xl px-4 py-2 font-medium transition-colors"
+                onClick={handleMessage}
+                disabled={createConversationMutation.isPending}
+                className="flex items-center gap-2 rounded-xl bg-[var(--color-gold)] px-4 py-2 font-medium text-[var(--color-midnight)] transition-colors hover:bg-[#C5A028] disabled:opacity-50"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Edit2 size={16} />
+                <MessageCircle size={16} />
+                <span>مراسلة</span>
               </motion.button>
-            </Link>
-          )}
+            )}
+
+            {isOwnProfile && (
+              <Link href="/profile/edit">
+                <motion.button
+                  className="bg-gold text-midnight hover:bg-gold-light flex items-center gap-2 rounded-xl px-4 py-2 font-medium transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Edit2 size={16} />
+                </motion.button>
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Name and Bio */}
