@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { arMA } from "date-fns/locale";
 import { User, Users } from "lucide-react";
@@ -69,24 +70,45 @@ export function ConversationItem({
       }`}
     >
       {/* Avatar */}
-      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-[#1A1A1A]">
-        {displayAvatar ? (
-          <Image
-            src={displayAvatar}
-            alt={displayName ?? "Avatar"}
-            fill
-            className="object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-[#A0A0A0]">
-            {conversation.type === "group" ? (
-              <Users size={20} />
-            ) : (
+      {conversation.type === "private" && otherParticipant ? (
+        <Link
+          href={`/profile/${otherParticipant.id}`}
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-[#1A1A1A]"
+        >
+          {displayAvatar ? (
+            <Image
+              src={displayAvatar}
+              alt={displayName ?? "Avatar"}
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[#A0A0A0]">
               <User size={20} />
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </Link>
+      ) : (
+        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-[#1A1A1A]">
+          {displayAvatar ? (
+            <Image
+              src={displayAvatar}
+              alt={displayName ?? "Avatar"}
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[#A0A0A0]">
+              {conversation.type === "group" ? (
+                <Users size={20} />
+              ) : (
+                <User size={20} />
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Content */}
       <div className="min-w-0 flex-1 text-right">

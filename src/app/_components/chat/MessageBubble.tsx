@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { format } from "date-fns";
 import { arMA } from "date-fns/locale";
 import {
@@ -55,7 +56,10 @@ export function MessageBubble({
     >
       {/* Avatar */}
       {!isMe && (
-        <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/10 bg-[#1A1A1A]">
+        <Link
+          href={`/profile/${message.senderId}`}
+          className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/10 bg-[#1A1A1A]"
+        >
           {message.senderAvatar && (
             <Image
               src={message.senderAvatar}
@@ -65,7 +69,7 @@ export function MessageBubble({
               className="h-full w-full object-cover"
             />
           )}
-        </div>
+        </Link>
       )}
 
       {/* Bubble Container */}

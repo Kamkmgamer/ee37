@@ -177,22 +177,44 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
           <Link href="/chat" className="text-[#A0A0A0] md:hidden">
             <ArrowRight size={24} />
           </Link>
-          <div className="relative h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-[#1A1A1A]">
-            {displayAvatar ? (
-              <Image
-                src={displayAvatar}
-                alt={displayName ?? ""}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-[#D4AF37]/20">
-                <span className="font-bold text-[#D4AF37]">
-                  {displayName?.charAt(0)}
-                </span>
-              </div>
-            )}
-          </div>
+          {conversation.type === "private" && otherParticipant ? (
+            <Link
+              href={`/profile/${otherParticipant.id}`}
+              className="relative h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-[#1A1A1A]"
+            >
+              {displayAvatar ? (
+                <Image
+                  src={displayAvatar}
+                  alt={displayName ?? ""}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-[#D4AF37]/20">
+                  <span className="font-bold text-[#D4AF37]">
+                    {displayName?.charAt(0)}
+                  </span>
+                </div>
+              )}
+            </Link>
+          ) : (
+            <div className="relative h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-[#1A1A1A]">
+              {displayAvatar ? (
+                <Image
+                  src={displayAvatar}
+                  alt={displayName ?? ""}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-[#D4AF37]/20">
+                  <span className="font-bold text-[#D4AF37]">
+                    {displayName?.charAt(0)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
           <div>
             <h3 className="font-bold text-[#EAEAEA]">{displayName}</h3>
             {conversation.type === "group" && (
