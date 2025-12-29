@@ -8,6 +8,13 @@
       "when": 1766844318984,
       "tag": "0000_lively_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1767024938873,
+      "tag": "0001_great_living_lightning",
+      "breakpoints": true
     }
   ]
 }
