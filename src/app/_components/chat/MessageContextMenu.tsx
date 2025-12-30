@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useLayoutEffect, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Reply, Forward, Trash2, Users, X } from "lucide-react";
+import { Reply, Forward, Trash2, Users, X, EyeOff } from "lucide-react";
 import { REACTION_ICONS, type ReactionType } from "../icons/ReactionIcons";
 import type { Message } from "./types";
 
@@ -41,40 +42,78 @@ export function MessageContextMenu({
   onDeleteForAll,
 }: MessageContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const [menuPosition, setMenuPosition] = useState(position);
+  const [menuStyle, setMenuStyle] = useState<{
+    top?: number;
+    left?: number;
+    bottom?: number;
+    right?: number;
+    transformOrigin: string;
+  }>({
+    top: position.y,
+    left: position.x,
+    transformOrigin: "top left",
+  });
+
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [customEmoji, setCustomEmoji] = useState("");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useLayoutEffect(() => {
     if (isOpen && menuRef.current) {
       const menu = menuRef.current;
       const rect = menu.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
 
-      let adjustedX = position.x;
-      let adjustedY = position.y;
+      // Smart Positioning Strategy:
+      // Position near the cursor (message), but clamp to screen boundaries.
 
-      if (position.x + rect.width > viewportWidth - 10) {
-        adjustedX = viewportWidth - rect.width - 10;
-      }
-      if (position.x < 10) {
-        adjustedX = 10;
+      const MENU_WIDTH = rect.width > 0 ? rect.width : 220;
+      const MENU_HEIGHT = rect.height > 0 ? rect.height : 300;
+
+      let top = position.y;
+      let left = position.x;
+      let transformOriginX = "left";
+      let transformOriginY = "top";
+
+      // Horizontal: Check right overflow
+      if (left + MENU_WIDTH > viewportWidth - 10) {
+        // If it overflows right, flip to left of cursor
+        left = position.x - MENU_WIDTH;
+        transformOriginX = "right";
+
+        // If flipping left goes off-screen, clamp it
+        if (left < 10) {
+          left = viewportWidth - MENU_WIDTH - 10;
+        }
       }
 
-      if (position.y + rect.height > viewportHeight - 10) {
-        adjustedY = position.y - rect.height;
-      }
-      if (adjustedY < 10) {
-        adjustedY = 10;
+      // Vertical: Check bottom overflow
+      if (top + MENU_HEIGHT > viewportHeight - 10) {
+        // If it overflows bottom, flip upwards
+        top = position.y - MENU_HEIGHT;
+        transformOriginY = "bottom";
+
+        // If flipping up goes off-screen, clamp top
+        if (top < 10) top = 10;
       }
 
-      setMenuPosition({ x: adjustedX, y: adjustedY });
+      setMenuStyle({
+        top,
+        left,
+        transformOrigin: `${transformOriginY} ${transformOriginX}`,
+      });
     }
   }, [isOpen, position]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      // Note: Because of Portal, checking ref.contains is tricky if structure is disparate
+      // But ref is on the modal div, so it should work fine for clicks outside the actual modal.
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         onClose();
       }
@@ -166,9 +205,10 @@ export function MessageContextMenu({
     onClose();
   };
 
-  if (!message) return null;
+  if (!message || !mounted) return null;
 
-  return (
+  // Render via Portal to ensure it breaks out of any overflow:hidden or transform containers
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -177,22 +217,23 @@ export function MessageContextMenu({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm"
             onClick={onClose}
           />
 
           {/* Context Menu */}
           <motion.div
             ref={menuRef}
-            initial={{ opacity: 0, scale: 0.9, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: -10 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             style={{
               position: "fixed",
-              left: menuPosition.x,
-              top: menuPosition.y,
-              zIndex: 50,
+              top: menuStyle.top,
+              left: menuStyle.left,
+              transformOrigin: menuStyle.transformOrigin,
+              zIndex: 9999,
             }}
             className="min-w-[220px] overflow-hidden rounded-2xl border border-white/10 bg-[#1A1A1A]/95 shadow-2xl backdrop-blur-xl"
           >
@@ -277,13 +318,19 @@ export function MessageContextMenu({
               {/* Divider */}
               <div className="my-1 border-t border-white/10" />
 
-              {/* Delete for Me */}
+              {/* Delete for Me / Hide */}
               <button
                 onClick={handleDeleteForMe}
                 className="flex w-full items-center gap-3 px-4 py-3 text-right transition-colors hover:bg-red-500/10"
               >
-                <Trash2 size={18} className="text-red-400" />
-                <span className="text-sm text-red-400">حذف لي</span>
+                {isMe ? (
+                  <Trash2 size={18} className="text-red-400" />
+                ) : (
+                  <EyeOff size={18} className="text-red-400" />
+                )}
+                <span className="text-sm text-red-400">
+                  {isMe ? "حذف لي" : "إخفاء"}
+                </span>
               </button>
 
               {/* Delete for Everyone (only for sender) */}
@@ -300,6 +347,7 @@ export function MessageContextMenu({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

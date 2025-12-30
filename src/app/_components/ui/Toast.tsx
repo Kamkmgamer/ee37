@@ -10,7 +10,6 @@ import React, {
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, AlertTriangle, X, Info } from "lucide-react";
 
-// --- Types ---
 type ToastType = "success" | "error" | "info" | "warning";
 
 interface Toast {
@@ -28,10 +27,8 @@ interface ToastContextType {
   };
 }
 
-// --- Context ---
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
-// --- Component: Heavenly Toast Item ---
 function ToastItem({
   toast,
   onDismiss,
@@ -86,15 +83,12 @@ function ToastItem({
   );
 }
 
-// --- Provider ---
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((message: string, type: ToastType) => {
     const id = Math.random().toString(36).substring(7);
     setToasts((prev) => [...prev, { id, message, type }]);
-
-    // Auto dismiss
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 4000);
@@ -127,7 +121,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// --- Hook ---
 export function useToast() {
   const context = useContext(ToastContext);
   if (!context) {
