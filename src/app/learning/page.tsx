@@ -8,49 +8,31 @@ import {
   BookOpen,
   PenTool,
   ChevronLeft,
+  type LucideIcon,
+  Database,
+  Globe,
+  Server,
+  Code,
 } from "lucide-react";
 import Link from "next/link";
+import { api } from "~/trpc/react";
 
-const resources = [
-  {
-    title: "تحليل الدوائر",
-    icon: Zap,
-    desc: "قوانين كيرشوف والشبكات",
-    accent: "#D4A853",
-  },
-  {
-    title: "المنطق الرقمي",
-    icon: Cpu,
-    desc: "البوابات والجبر البولي",
-    accent: "#B87333",
-  },
-  {
-    title: "إشارات ونظم",
-    icon: Radio,
-    desc: "فورييه ولابلاس",
-    accent: "#1A2744",
-  },
-  {
-    title: "المعالجات الدقيقة",
-    icon: Activity,
-    desc: "8085 والمواجهة البينية",
-    accent: "#D4A853",
-  },
-  {
-    title: "نظم التحكم",
-    icon: PenTool,
-    desc: "الاستقرار والتحكم الآلي",
-    accent: "#B87333",
-  },
-  {
-    title: "كهرومغناطيسية",
-    icon: BookOpen,
-    desc: "ماكسويل والموجات",
-    accent: "#1A2744",
-  },
-];
+const iconMap: Record<string, LucideIcon> = {
+  Zap,
+  Cpu,
+  Radio,
+  Activity,
+  PenTool,
+  BookOpen,
+  Database,
+  Globe,
+  Server,
+  Code,
+};
 
 export default function LearningPage() {
+  const { data: subjects, isLoading } = api.learning.getSubjects.useQuery();
+
   return (
     <div
       className="noise-texture relative min-h-screen bg-[var(--color-paper)]"
@@ -121,54 +103,76 @@ export default function LearningPage() {
         </motion.div>
 
         {/* Resource Grid */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {resources.map((res, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                delay: i * 0.1,
-                duration: 0.5,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-            >
-              <button className="group w-full text-right">
-                <div className="elegant-card rounded-3xl p-6 transition-all duration-500 hover:shadow-[var(--color-gold)]/10 hover:shadow-2xl">
-                  <div className="flex items-start gap-5">
-                    <div
-                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all duration-500 group-hover:scale-110 group-hover:shadow-lg"
-                      style={{
-                        backgroundColor: `${res.accent}15`,
-                        color: res.accent,
-                        boxShadow: `0 0 0 0 ${res.accent}30`,
-                      }}
-                    >
-                      <res.icon size={26} />
-                    </div>
+        {isLoading ? (
+          <div className="flex justify-center py-20">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--color-gold)] border-t-transparent" />
+          </div>
+        ) : subjects && subjects.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {subjects.map((sub, i) => {
+              const IconComponent = iconMap[sub.icon] ?? BookOpen;
+              return (
+                <motion.div
+                  key={sub.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: i * 0.1,
+                    duration: 0.5,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                >
+                  <Link
+                    href={`/learning/${sub.id}`}
+                    className="group block w-full text-right"
+                  >
+                    <div className="elegant-card rounded-3xl p-6 transition-all duration-500 hover:shadow-[var(--color-gold)]/10 hover:shadow-2xl">
+                      <div className="flex items-start gap-5">
+                        <div
+                          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl transition-all duration-500 group-hover:scale-110 group-hover:shadow-lg"
+                          style={{
+                            backgroundColor: `${sub.accentColor}15`,
+                            color: sub.accentColor,
+                            boxShadow: `0 0 0 0 ${sub.accentColor}30`,
+                          }}
+                        >
+                          <IconComponent size={26} />
+                        </div>
 
-                    <div className="min-w-0 flex-1">
-                      <h3
-                        className="mb-1 text-xl font-bold text-[var(--color-midnight)] transition-colors group-hover:text-[var(--color-gold)]"
-                        style={{ fontFamily: "var(--font-display)" }}
-                      >
-                        {res.title}
-                      </h3>
-                      <p className="truncate text-sm text-[var(--color-midnight)]/50">
-                        {res.desc}
-                      </p>
-                    </div>
+                        <div className="min-w-0 flex-1">
+                          <h3
+                            className="mb-1 text-xl font-bold text-[var(--color-midnight)] transition-colors group-hover:text-[var(--color-gold)]"
+                            style={{ fontFamily: "var(--font-display)" }}
+                          >
+                            {sub.name}
+                          </h3>
+                          <p className="truncate font-mono text-sm text-[var(--color-midnight)]/50">
+                            {sub.code}
+                          </p>
+                          {sub.description && (
+                            <p className="mt-1 line-clamp-2 text-sm text-[var(--color-midnight)]/40">
+                              {sub.description}
+                            </p>
+                          )}
+                        </div>
 
-                    <ChevronLeft
-                      size={20}
-                      className="mt-4 translate-x-2 text-[var(--color-gold)] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
-                    />
-                  </div>
-                </div>
-              </button>
-            </motion.div>
-          ))}
-        </div>
+                        <ChevronLeft
+                          size={20}
+                          className="mt-4 translate-x-2 text-[var(--color-gold)] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+                        />
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-20 text-center text-[var(--color-midnight)]/40">
+            <BookOpen size={48} className="mx-auto mb-4 opacity-20" />
+            <p>لا توجد مواد مضافة حالياً</p>
+          </div>
+        )}
 
         {/* CTA Section */}
         <motion.div
@@ -180,9 +184,10 @@ export default function LearningPage() {
           <div className="mb-4 flex items-center justify-center gap-2">
             <div className="h-2 w-2 rounded-full bg-[var(--color-gold)]" />
             <span className="font-medium text-[var(--color-midnight)]/60">
-              هل تريد إضافة مادة؟
+              هل تريد إضافة مادة أو محاضرة؟
             </span>
           </div>
+          {/* Note: In a real app, this would link to a subject creation page or a form */}
           <Link href="/survey">
             <motion.button
               whileHover={{ scale: 1.02 }}
