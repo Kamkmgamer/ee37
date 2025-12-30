@@ -33,6 +33,7 @@ type AuthState = {
     identifier?: string[];
     form?: string;
   };
+  success?: boolean;
 };
 
 export async function signup(prevState: AuthState | null, formData: FormData): Promise<AuthState> {
@@ -82,7 +83,7 @@ export async function signup(prevState: AuthState | null, formData: FormData): P
     name: newUser.name,
   });
 
-  redirect("/");
+  return { success: true };
 }
 
 export async function login(prevState: AuthState | null, formData: FormData): Promise<AuthState> {
@@ -119,7 +120,7 @@ export async function login(prevState: AuthState | null, formData: FormData): Pr
     name: user.name,
   });
 
-  redirect("/");
+  return { success: true };
 }
 
 export async function logout() {

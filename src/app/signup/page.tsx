@@ -1,20 +1,39 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useEffect } from "react";
 import { signup } from "../actions/auth";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import {
+  AuthCardEntry,
+  SuccessPageTransition,
+  PasswordInput,
+  AnimatedError,
+} from "../_components/auth/AuthAnimations";
 
 export default function SignupPage() {
   const [state, action, isPending] = useActionState(signup, null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state?.success) {
+      setShowSuccess(true);
+      const timer = setTimeout(() => {
+        router.push("/");
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [state?.success, router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0A1628] p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
-      >
+    <div
+      className="flex min-h-screen items-center justify-center bg-[#0A1628] p-4 text-right"
+      dir="rtl"
+    >
+      <SuccessPageTransition show={showSuccess} />
+
+      <AuthCardEntry>
         <div className="relative overflow-hidden rounded-2xl bg-[#FAF7F0] p-8 shadow-2xl">
           {/* Decorative blueprint lines */}
           <div className="absolute top-0 left-0 h-1 w-full bg-[#D4A853]" />
@@ -33,12 +52,14 @@ export default function SignupPage() {
                 name="name"
                 type="text"
                 required
-                className="w-full rounded-lg border border-[#0A1628]/10 bg-[#0A1628]/5 px-4 py-3 text-[#0A1628] focus:ring-2 focus:ring-[#D4A853] focus:outline-none"
+                className={`w-full rounded-lg border bg-[#0A1628]/5 px-4 py-3 text-[#0A1628] transition-colors focus:outline-none ${
+                  state?.error?.name
+                    ? "border-red-500 focus:ring-2 focus:ring-red-500/20"
+                    : "border-[#0A1628]/10 focus:ring-2 focus:ring-[#D4A853]"
+                }`}
                 placeholder="حاتم سليمان "
               />
-              {state?.error?.name && (
-                <p className="mt-1 text-sm text-red-500">{state.error.name}</p>
-              )}
+              <AnimatedError>{state?.error?.name}</AnimatedError>
             </div>
 
             <div>
@@ -50,17 +71,17 @@ export default function SignupPage() {
                 type="text"
                 required
                 maxLength={12}
-                className="w-full rounded-lg border border-[#0A1628]/10 bg-[#0A1628]/5 px-4 py-3 text-[#0A1628] focus:ring-2 focus:ring-[#D4A853] focus:outline-none"
+                className={`w-full rounded-lg border bg-[#0A1628]/5 px-4 py-3 text-[#0A1628] transition-colors focus:outline-none ${
+                  state?.error?.collegeId
+                    ? "border-red-500 focus:ring-2 focus:ring-red-500/20"
+                    : "border-[#0A1628]/10 focus:ring-2 focus:ring-[#D4A853]"
+                }`}
                 placeholder="2020..."
               />
               <p className="mt-1 text-xs text-[#0A1628]/40">
                 يجب أن يتكون من 12 رقماً ويبدأ بـ 2018، 2019، أو 2020
               </p>
-              {state?.error?.collegeId && (
-                <p className="mt-1 text-sm text-red-500">
-                  {state.error.collegeId}
-                </p>
-              )}
+              <AnimatedError>{state?.error?.collegeId}</AnimatedError>
             </div>
 
             <div>
@@ -71,43 +92,33 @@ export default function SignupPage() {
                 name="email"
                 type="email"
                 required
-                className="w-full rounded-lg border border-[#0A1628]/10 bg-[#0A1628]/5 px-4 py-3 text-[#0A1628] focus:ring-2 focus:ring-[#D4A853] focus:outline-none"
+                className={`w-full rounded-lg border bg-[#0A1628]/5 px-4 py-3 text-[#0A1628] transition-colors focus:outline-none ${
+                  state?.error?.email
+                    ? "border-red-500 focus:ring-2 focus:ring-red-500/20"
+                    : "border-[#0A1628]/10 focus:ring-2 focus:ring-[#D4A853]"
+                }`}
                 placeholder="Hatim@example.com"
               />
-              {state?.error?.email && (
-                <p className="mt-1 text-sm text-red-500">{state.error.email}</p>
-              )}
+              <AnimatedError>{state?.error?.email}</AnimatedError>
             </div>
 
             <div>
               <label className="mb-1 block font-medium text-[#0A1628]">
                 كلمة المرور
               </label>
-              <input
-                name="password"
-                type="password"
-                required
-                className="w-full rounded-lg border border-[#0A1628]/10 bg-[#0A1628]/5 px-4 py-3 text-[#0A1628] focus:ring-2 focus:ring-[#D4A853] focus:outline-none"
-                placeholder="••••••••"
-              />
-              {state?.error?.password && (
-                <p className="mt-1 text-sm text-red-500">
-                  {state.error.password}
-                </p>
-              )}
+              <PasswordInput name="password" error={!!state?.error?.password} />
+              <AnimatedError>{state?.error?.password}</AnimatedError>
             </div>
 
-            {state?.error?.form && (
-              <p className="text-center text-sm text-red-500">
-                {state.error.form}
-              </p>
-            )}
+            <AnimatedError>{state?.error?.form}</AnimatedError>
 
             <button
-              disabled={isPending}
-              className="w-full cursor-pointer rounded-lg bg-[#0A1628] py-3 font-bold text-[#D4A853] transition-colors hover:bg-[#0A1628]/90 disabled:opacity-50"
+              disabled={isPending || showSuccess}
+              className="w-full cursor-pointer rounded-lg bg-[#0A1628] py-3 font-bold text-[#D4A853] transition-all hover:bg-[#0A1628]/90 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isPending ? "جاري إنشاء الحساب..." : "إنشاء الحساب"}
+              {isPending || showSuccess
+                ? "جاري إنشاء الحساب..."
+                : "إنشاء الحساب"}
             </button>
           </form>
 
@@ -121,7 +132,7 @@ export default function SignupPage() {
             </Link>
           </p>
         </div>
-      </motion.div>
+      </AuthCardEntry>
     </div>
   );
 }
