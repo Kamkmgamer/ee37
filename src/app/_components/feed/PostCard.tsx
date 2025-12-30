@@ -38,6 +38,7 @@ interface PostCardProps {
     id: string;
     content: string;
     createdAt: Date;
+    updatedAt?: Date | null;
     authorId: string;
     authorName: string;
     authorAvatar: string | null;
@@ -58,6 +59,7 @@ export function PostCard({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const utils = api.useUtils();
 
   const [isDeleted, setIsDeleted] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -81,6 +83,8 @@ export function PostCard({
   const deletePost = api.feed.deletePost.useMutation({
     onSuccess: () => {
       setIsDeleted(true);
+      void utils.feed.getPosts.invalidate();
+      void utils.feed.getPostsByUser.invalidate({ userId: post.authorId });
     },
   });
 
@@ -88,6 +92,9 @@ export function PostCard({
     onSuccess: () => {
       setIsEditing(false);
       setShowMenu(false);
+      void utils.feed.getPosts.invalidate();
+      void utils.feed.getPostsByUser.invalidate({ userId: post.authorId });
+      void utils.feed.getPost.invalidate({ postId: post.id });
     },
   });
 
@@ -138,6 +145,13 @@ export function PostCard({
             </h3>
             <p className="text-xs font-medium text-gray-700 sm:text-sm">
               {timeAgo}
+              {post.updatedAt &&
+                new Date(post.updatedAt).getTime() >
+                  new Date(post.createdAt).getTime() + 1000 && (
+                  <span className="text-midnight/40 mr-1.5 text-[10px] font-normal italic">
+                    (معدل)
+                  </span>
+                )}
             </p>
           </div>
         </Link>
@@ -178,13 +192,17 @@ export function PostCard({
                         onClick={() => {
                           void deletePost.mutateAsync({
                             postId: post.id,
-                            userId: currentUserId,
                           });
                           setShowMenu(false);
                         }}
+                        disabled={deletePost.isPending}
                         className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-red-500 transition-colors hover:bg-red-50"
                       >
-                        <Trash2 size={16} />
+                        {deletePost.isPending ? (
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-red-500/30 border-t-red-500" />
+                        ) : (
+                          <Trash2 size={16} />
+                        )}
                         <span>حذف</span>
                       </button>
                     </>

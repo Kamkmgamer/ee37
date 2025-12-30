@@ -21,6 +21,7 @@ export interface Comment {
   id: string;
   content: string;
   createdAt: Date;
+  updatedAt?: Date | null;
   parentId: string | null;
   author: {
     id: string;
@@ -163,9 +164,14 @@ export function CommentItem({
                                 commentId: comment.id,
                               });
                             }}
+                            disabled={deleteComment.isPending}
                             className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
                           >
-                            <Trash2 size={14} />
+                            {deleteComment.isPending ? (
+                              <span className="h-3 w-3 animate-spin rounded-full border border-red-600/30 border-t-red-600" />
+                            ) : (
+                              <Trash2 size={14} />
+                            )}
                             <span>حذف</span>
                           </button>
                         </>
@@ -237,6 +243,13 @@ export function CommentItem({
         <div className="mt-1 flex items-center gap-4 px-4">
           <span className="text-[11px] font-medium text-gray-600">
             {timeAgo}
+            {comment.updatedAt &&
+              new Date(comment.updatedAt).getTime() >
+                new Date(comment.createdAt).getTime() + 1000 && (
+                <span className="text-midnight/40 mr-1 text-[9px] font-normal italic">
+                  (معدل)
+                </span>
+              )}
           </span>
           <button
             onClick={() => setIsReplying(!isReplying)}

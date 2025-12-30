@@ -80,6 +80,7 @@ export const feedRouter = createTRPCRouter({
           id: socialPosts.id,
           content: socialPosts.content,
           createdAt: socialPosts.createdAt,
+          updatedAt: socialPosts.updatedAt,
           authorId: socialPosts.authorId,
           authorName: users.name,
           authorAvatar: userProfiles.avatarUrl,
@@ -165,6 +166,7 @@ export const feedRouter = createTRPCRouter({
           id: socialPosts.id,
           content: socialPosts.content,
           createdAt: socialPosts.createdAt,
+          updatedAt: socialPosts.updatedAt,
           authorId: socialPosts.authorId,
           authorName: users.name,
           authorAvatar: userProfiles.avatarUrl,
@@ -218,11 +220,10 @@ export const feedRouter = createTRPCRouter({
     }),
 
   // Delete a post (only by author)
-  deletePost: publicProcedure
+  deletePost: protectedProcedure
     .input(
       z.object({
         postId: z.string().uuid(),
-        userId: z.string().uuid(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -233,7 +234,7 @@ export const feedRouter = createTRPCRouter({
         .where(eq(socialPosts.id, input.postId))
         .limit(1);
 
-      if (!post || post.authorId !== input.userId) {
+      if (!post || post.authorId !== ctx.session.user.id) {
         throw new Error("غير مصرح لك بحذف هذا المنشور");
       }
 
@@ -282,6 +283,7 @@ export const feedRouter = createTRPCRouter({
           id: socialPosts.id,
           content: socialPosts.content,
           createdAt: socialPosts.createdAt,
+          updatedAt: socialPosts.updatedAt,
           authorId: socialPosts.authorId,
           authorName: users.name,
           authorAvatar: userProfiles.avatarUrl,
