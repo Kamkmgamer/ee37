@@ -36,7 +36,7 @@ This project is built using the [T3 Stack](https://create.t3.gg/), maximizing ty
 1.  **Clone the repository**
 
     ```bash
-    git clone https://github.com/your-username/ee37.git
+    git clone https://github.com/kamkmgamer/ee37.git
     cd ee37
     ```
 
