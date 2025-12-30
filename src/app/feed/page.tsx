@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Home, User, LogOut } from "lucide-react";
+import { Home, User, LogOut, ShieldCheck } from "lucide-react";
 import { verifySession, deleteSession } from "~/lib/session";
 import { api } from "~/trpc/server";
 import { CreatePostForm } from "../_components/feed/CreatePostForm";
@@ -35,6 +35,15 @@ export default async function FeedPage() {
             المنشورات
           </h1>
           <nav className="flex items-center gap-2">
+            {profile?.isAdmin && (
+              <Link
+                href="/moderation"
+                className="text-midnight/60 hover:bg-midnight/5 rounded-xl p-2 transition-colors"
+                title="الإشراف"
+              >
+                <ShieldCheck size={20} className="text-orange-600" />
+              </Link>
+            )}
             <Link
               href="/feed"
               className="bg-gold/10 text-gold hover:bg-gold/20 rounded-xl p-2 transition-colors"

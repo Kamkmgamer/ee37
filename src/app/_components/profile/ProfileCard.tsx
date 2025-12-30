@@ -4,8 +4,18 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { MapPin, Globe, Calendar, Edit2, MessageCircle } from "lucide-react";
+import {
+  MapPin,
+  Globe,
+  Calendar,
+  Edit2,
+  MessageCircle,
+  AlertTriangle,
+  MoreHorizontal,
+} from "lucide-react";
+import { useState } from "react";
 import { api } from "~/trpc/react";
+import { ReportModal } from "../modals/ReportModal";
 
 interface ProfileCardProps {
   profile: {
@@ -29,6 +39,8 @@ export function ProfileCard({
   isOwnProfile = false,
   postCount = 0,
 }: ProfileCardProps) {
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const joinDate = new Date(profile.createdAt).toLocaleDateString("ar-SA", {
     year: "numeric",
     month: "long",
@@ -89,16 +101,54 @@ export function ProfileCard({
           {/* Edit button for own profile */}
           <div className="flex gap-2">
             {!isOwnProfile && (
-              <motion.button
-                onClick={handleMessage}
-                disabled={createConversationMutation.isPending}
-                className="flex items-center gap-2 rounded-xl bg-[var(--color-gold)] px-4 py-2 font-medium text-[var(--color-midnight)] transition-colors hover:bg-[#C5A028] disabled:opacity-50"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <MessageCircle size={16} />
-                <span>مراسلة</span>
-              </motion.button>
+              <div className="relative flex gap-2">
+                <motion.button
+                  onClick={handleMessage}
+                  disabled={createConversationMutation.isPending}
+                  className="flex items-center gap-2 rounded-xl bg-[var(--color-gold)] px-4 py-2 font-medium text-[var(--color-midnight)] transition-colors hover:bg-[#C5A028] disabled:opacity-50"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <MessageCircle size={16} />
+                  <span>مراسلة</span>
+                </motion.button>
+
+                <div className="relative">
+                  <motion.button
+                    onClick={() => setShowMenu(!showMenu)}
+                    className="flex items-center justify-center rounded-xl bg-gray-100 p-2 text-gray-500 transition-colors hover:bg-gray-200"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <MoreHorizontal size={20} />
+                  </motion.button>
+
+                  {showMenu && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setShowMenu(false)}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        className="absolute bottom-full left-0 z-50 mb-2 min-w-[140px] rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/5"
+                      >
+                        <button
+                          onClick={() => {
+                            setShowReportModal(true);
+                            setShowMenu(false);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-orange-600 transition-colors hover:bg-orange-50"
+                        >
+                          <AlertTriangle size={16} />
+                          <span className="text-sm font-bold">إبلاغ</span>
+                        </button>
+                      </motion.div>
+                    </>
+                  )}
+                </div>
+              </div>
             )}
 
             {isOwnProfile && (
@@ -109,11 +159,19 @@ export function ProfileCard({
                   whileTap={{ scale: 0.98 }}
                 >
                   <Edit2 size={16} />
+                  <span>تعديل</span>
                 </motion.button>
               </Link>
             )}
           </div>
         </div>
+
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          targetId={profile.userId}
+          targetType="user"
+        />
 
         {/* Name and Bio */}
         <div className="mb-4">

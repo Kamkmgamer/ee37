@@ -4,8 +4,16 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { CommentForm } from "./CommentForm";
-import { MoreHorizontal, Pencil, Trash2, X, Check } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  X,
+  Check,
+  AlertTriangle,
+} from "lucide-react";
 import { api } from "~/trpc/react";
+import { ReportModal } from "../../modals/ReportModal";
 
 import { ReactionBar } from "../ReactionBar";
 
@@ -50,6 +58,7 @@ export function CommentItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [showMenu, setShowMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const utils = api.useUtils();
 
@@ -120,8 +129,8 @@ export function CommentItem({
               {comment.author.name}
             </Link>
 
-            {/* Menu for Author */}
-            {isAuthor && !isEditing && (
+            {/* Menu */}
+            {!isEditing && (
               <div className="relative">
                 <button
                   onClick={() => setShowMenu(!showMenu)}
@@ -136,31 +145,55 @@ export function CommentItem({
                       onClick={() => setShowMenu(false)}
                     />
                     <div className="absolute top-full left-0 z-50 mt-1 min-w-[120px] rounded-lg bg-white p-1 shadow-lg ring-1 ring-black/5">
-                      <button
-                        onClick={() => {
-                          setIsEditing(true);
-                          setShowMenu(false);
-                        }}
-                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
-                      >
-                        <Pencil size={14} />
-                        <span>تعديل</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          void deleteComment.mutate({ commentId: comment.id });
-                        }}
-                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 size={14} />
-                        <span>حذف</span>
-                      </button>
+                      {isAuthor ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              setIsEditing(true);
+                              setShowMenu(false);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                          >
+                            <Pencil size={14} />
+                            <span>تعديل</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              void deleteComment.mutate({
+                                commentId: comment.id,
+                              });
+                            }}
+                            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 size={14} />
+                            <span>حذف</span>
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setShowReportModal(true);
+                            setShowMenu(false);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-orange-600 hover:bg-orange-50"
+                        >
+                          <AlertTriangle size={14} />
+                          <span>إبلاغ</span>
+                        </button>
+                      )}
                     </div>
                   </>
                 )}
               </div>
             )}
           </div>
+
+          <ReportModal
+            isOpen={showReportModal}
+            onClose={() => setShowReportModal(false)}
+            targetId={comment.id}
+            targetType="comment"
+          />
 
           {isEditing ? (
             <div className="mt-2">

@@ -28,10 +28,23 @@ import { db } from "~/server/db";
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
   const session = await verifySession();
+  
+  let userData = null;
+  if (session) {
+    userData = await db.query.users.findFirst({
+      where: (u, { eq }) => eq(u.id, session.userId),
+    });
+  }
 
   return {
     db,
-    session: session ? { user: { id: session.userId, ...session } } : null,
+    session: session && userData ? { 
+      user: { 
+        id: session.userId, 
+        ...session,
+        isAdmin: userData.isAdmin,
+      } 
+    } : null,
     ...opts,
   };
 };
@@ -131,3 +144,19 @@ export const protectedProcedure = t.procedure
       },
     });
   });
+
+/**
+ * Admin procedure
+ *
+ * Use this for moderation and administrative actions.
+ */
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (!ctx.session.user.isAdmin) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+  }
+  return next({
+    ctx: {
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  });
+});

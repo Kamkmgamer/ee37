@@ -92,6 +92,7 @@ export const users = createTable(
       .$defaultFn(() => new Date())
       .notNull(),
     updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+    isAdmin: d.boolean().default(false).notNull(),
   }),
   (t) => [
     index("user_college_id_idx").on(t.collegeId),
@@ -402,6 +403,52 @@ export const notifications = createTable(
   ],
 );
 
+// Reports System
+export const reportReasonEnum = pgEnum("report_reason", [
+  "spam",
+  "harassment",
+  "hate_speech",
+  "violence",
+  "nudity",
+  "misinformation",
+  "other",
+]);
+
+export const reportStatusEnum = pgEnum("report_status", [
+  "pending",
+  "resolved",
+  "dismissed",
+]);
+
+export const reportTargetTypeEnum = pgEnum("report_target_type", [
+  "post",
+  "comment",
+  "user",
+]);
+
+export const reports = createTable(
+  "report",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    reporterId: d.uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    targetType: reportTargetTypeEnum().notNull(),
+    targetId: d.uuid().notNull(), // Generic ID, can be post, comment, or user
+    reason: reportReasonEnum().notNull(),
+    status: reportStatusEnum().default("pending").notNull(),
+    details: d.text(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("report_reporter_idx").on(t.reporterId),
+    index("report_target_idx").on(t.targetType, t.targetId),
+    index("report_status_idx").on(t.status),
+  ],
+);
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   profile: one(userProfiles, {
@@ -415,6 +462,14 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   createdConversations: many(conversations),
   conversationParticipations: many(conversationParticipants),
   messages: many(messages),
+  filedReports: many(reports),
+}));
+
+export const reportsRelations = relations(reports, ({ one }) => ({
+  reporter: one(users, {
+    fields: [reports.reporterId],
+    references: [users.id],
+  }),
 }));
 
 export const userProfilesRelations = relations(userProfiles, ({ one }) => ({

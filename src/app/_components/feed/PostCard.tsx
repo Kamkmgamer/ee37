@@ -13,9 +13,11 @@ import {
   Pencil,
   Check,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { ReactionBar } from "./ReactionBar";
 import { CommentSection } from "./comments/CommentSection";
+import { ReportModal } from "../modals/ReportModal";
 import { api } from "~/trpc/react";
 
 interface PostMedia {
@@ -64,6 +66,7 @@ export function PostCard({
   // Edit State
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const handleMediaClick = (media: PostMedia) => {
     const newParams = new URLSearchParams(searchParams.toString());
@@ -140,7 +143,7 @@ export function PostCard({
         </Link>
 
         {/* Menu */}
-        {isAuthor && !isEditing && (
+        {!isEditing && (
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
@@ -159,35 +162,57 @@ export function PostCard({
                   animate={{ opacity: 1, scale: 1 }}
                   className="absolute top-full left-0 z-50 mt-1 min-w-[140px] rounded-xl bg-white p-2 shadow-lg ring-1 ring-black/5"
                 >
-                  <button
-                    onClick={() => {
-                      setIsEditing(true);
-                      setShowMenu(false);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
-                  >
-                    <Pencil size={16} />
-                    <span>تعديل</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      void deletePost.mutateAsync({
-                        postId: post.id,
-                        userId: currentUserId,
-                      });
-                      setShowMenu(false);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-red-500 transition-colors hover:bg-red-50"
-                  >
-                    <Trash2 size={16} />
-                    <span>حذف</span>
-                  </button>
+                  {isAuthor ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          setIsEditing(true);
+                          setShowMenu(false);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
+                      >
+                        <Pencil size={16} />
+                        <span>تعديل</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          void deletePost.mutateAsync({
+                            postId: post.id,
+                            userId: currentUserId,
+                          });
+                          setShowMenu(false);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-red-500 transition-colors hover:bg-red-50"
+                      >
+                        <Trash2 size={16} />
+                        <span>حذف</span>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setShowReportModal(true);
+                        setShowMenu(false);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-orange-600 transition-colors hover:bg-orange-50"
+                    >
+                      <AlertTriangle size={16} />
+                      <span>إبلاغ</span>
+                    </button>
+                  )}
                 </motion.div>
               </>
             )}
           </div>
         )}
       </div>
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        targetId={post.id}
+        targetType="post"
+      />
 
       {/* Content */}
       {isEditing ? (

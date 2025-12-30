@@ -21,6 +21,7 @@ export const profileRouter = createTRPCRouter({
           location: userProfiles.location,
           website: userProfiles.website,
           createdAt: users.createdAt,
+          isAdmin: users.isAdmin,
         })
         .from(users)
         .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
@@ -46,6 +47,7 @@ export const profileRouter = createTRPCRouter({
           location: userProfiles.location,
           website: userProfiles.website,
           createdAt: users.createdAt,
+          isAdmin: users.isAdmin,
         })
         .from(users)
         .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
