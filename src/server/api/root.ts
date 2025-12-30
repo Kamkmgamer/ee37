@@ -11,6 +11,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
  */
 import { commentsRouter } from "~/server/api/routers/comments";
 import { chatRouter } from "~/server/api/routers/chat";
+import { learningRouter } from "~/server/api/routers/learning";
 
 /**
  * This is the primary router for your server.
@@ -24,6 +25,7 @@ export const appRouter = createTRPCRouter({
   reactions: reactionsRouter,
   comments: commentsRouter,
   chat: chatRouter,
+  learning: learningRouter,
 });
 
 // export type definition of API
