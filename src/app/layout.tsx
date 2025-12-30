@@ -3,6 +3,7 @@ import "~/styles/globals.css";
 import { type Metadata } from "next";
 import { IBM_Plex_Sans_Arabic, Noto_Kufi_Arabic } from "next/font/google";
 
+import { ToastProvider } from "./_components/ui/Toast";
 import { TRPCReactProvider } from "~/trpc/react";
 import { ChatWidgetWrapper } from "./_components/ChatWidgetWrapper";
 import { verifySession } from "~/lib/session";
@@ -41,8 +42,10 @@ export default async function RootLayout({
     >
       <body className="font-sans antialiased" suppressHydrationWarning>
         <TRPCReactProvider>
-          {children}
-          {session && <ChatWidgetWrapper userId={session.userId} />}
+          <ToastProvider>
+            {children}
+            {session && <ChatWidgetWrapper userId={session.userId} />}
+          </ToastProvider>
         </TRPCReactProvider>
       </body>
     </html>

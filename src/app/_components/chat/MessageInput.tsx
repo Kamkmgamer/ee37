@@ -2,15 +2,15 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, ImagePlus, X, Loader2, Reply, Edit2 } from "lucide-react";
-import { useUploadThing } from "~/lib/uploadthing"; // Assuming this exists or I'll need to create it/use existing
+import { useUploadThing } from "~/lib/uploadthing";
 import Image from "next/image";
+import { useToast } from "../ui/Toast";
 
 interface Message {
   id: string;
   senderName: string | null;
   content: string | null;
 }
-
 interface MessageInputProps {
   onSendMessage: (
     content: string,
@@ -40,13 +40,14 @@ export function MessageInput({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const toast = useToast();
+
   const { startUpload } = useUploadThing("imageUploader", {
-    // Assuming 'imageUploader' endpoint exists
     onClientUploadComplete: (res) => {
       if (res) {
         const newMedia = res.map((file) => ({
           url: file.url,
-          type: "image" as const, // Naive assumption, uploadthing might return type
+          type: "image" as const,
         }));
         setMedia((prev) => [...prev, ...newMedia]);
       }
@@ -55,7 +56,7 @@ export function MessageInput({
     onUploadError: (error: Error) => {
       console.error(error);
       setIsUploading(false);
-      alert("فشل رفع الملف");
+      toast.error("فشل رفع الملف");
     },
     onUploadBegin: () => {
       setIsUploading(true);
@@ -68,7 +69,6 @@ export function MessageInput({
     }
   };
 
-  // Effect to pre-fill content when editing
   useEffect(() => {
     if (editingMessage) {
       setContent(editingMessage.content ?? "");
