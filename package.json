@@ -1,7 +1,9 @@
 {
-  "name": "ee37",
+  "name": "ee37-platform",
   "version": "0.1.0",
   "private": true,
+  "description": "منصة الدفعة السابعة والثلاثون - هندسة كهربائية، جامعة السودان للعلوم والتكنولوجيا",
+  "author": "Khalil Abdalmajeed Khalil",
   "type": "module",
   "scripts": {
     "build": "next build",
