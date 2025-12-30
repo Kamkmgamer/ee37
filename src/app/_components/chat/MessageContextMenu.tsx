@@ -3,7 +3,7 @@
 import { useState, useLayoutEffect, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Reply, Forward, Trash2, Users, X, EyeOff } from "lucide-react";
+import { Reply, Forward, Trash2, Users, X, EyeOff, Pencil } from "lucide-react";
 import { REACTION_ICONS, type ReactionType } from "../icons/ReactionIcons";
 import type { Message } from "./types";
 
@@ -15,6 +15,7 @@ interface MessageContextMenuProps {
   onClose: () => void;
   onReply: (message: Message) => void;
   onForward: (message: Message) => void;
+  onEdit: (message: Message) => void;
   onReact: (messageId: string, type: string) => void;
   onDeleteForMe: (messageId: string) => void;
   onDeleteForAll: (messageId: string) => void;
@@ -37,6 +38,7 @@ export function MessageContextMenu({
   onClose,
   onReply,
   onForward,
+  onEdit,
   onReact,
   onDeleteForMe,
   onDeleteForAll,
@@ -68,10 +70,6 @@ export function MessageContextMenu({
       const rect = menu.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-
-      // Smart Positioning Strategy:
-      // Position near the cursor (message), but clamp to screen boundaries.
-
       const MENU_WIDTH = rect.width > 0 ? rect.width : 220;
       const MENU_HEIGHT = rect.height > 0 ? rect.height : 300;
 
@@ -80,25 +78,18 @@ export function MessageContextMenu({
       let transformOriginX = "left";
       let transformOriginY = "top";
 
-      // Horizontal: Check right overflow
       if (left + MENU_WIDTH > viewportWidth - 10) {
-        // If it overflows right, flip to left of cursor
         left = position.x - MENU_WIDTH;
         transformOriginX = "right";
 
-        // If flipping left goes off-screen, clamp it
         if (left < 10) {
           left = viewportWidth - MENU_WIDTH - 10;
         }
       }
 
-      // Vertical: Check bottom overflow
       if (top + MENU_HEIGHT > viewportHeight - 10) {
-        // If it overflows bottom, flip upwards
         top = position.y - MENU_HEIGHT;
         transformOriginY = "bottom";
-
-        // If flipping up goes off-screen, clamp top
         if (top < 10) top = 10;
       }
 
@@ -112,8 +103,6 @@ export function MessageContextMenu({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      // Note: Because of Portal, checking ref.contains is tricky if structure is disparate
-      // But ref is on the modal div, so it should work fine for clicks outside the actual modal.
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         onClose();
       }
@@ -207,7 +196,6 @@ export function MessageContextMenu({
 
   if (!message || !mounted) return null;
 
-  // Render via Portal to ensure it breaks out of any overflow:hidden or transform containers
   return createPortal(
     <AnimatePresence>
       {isOpen && (
@@ -314,6 +302,22 @@ export function MessageContextMenu({
                 <Forward size={18} className="text-[#D4AF37]" />
                 <span className="text-sm text-white">توجيه</span>
               </button>
+
+              {/* Edit (only for sender) */}
+              {isMe && (
+                <button
+                  onClick={() => {
+                    if (message) {
+                      onEdit(message);
+                      onClose();
+                    }
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-right transition-colors hover:bg-white/5"
+                >
+                  <Pencil size={18} className="text-[#D4AF37]" />
+                  <span className="text-sm text-white">تعديل</span>
+                </button>
+              )}
 
               {/* Divider */}
               <div className="my-1 border-t border-white/10" />

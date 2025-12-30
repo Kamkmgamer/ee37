@@ -539,6 +539,7 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
         onClose={handleCloseContextMenu}
         onReply={setReplyingTo}
         onForward={handleForward}
+        onEdit={setEditingMessage}
         onReact={handleReact}
         onDeleteForMe={handleDeleteForMe}
         onDeleteForAll={handleDeleteForAll}

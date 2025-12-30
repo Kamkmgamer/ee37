@@ -4,6 +4,8 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { CommentForm } from "./CommentForm";
+import { MoreHorizontal, Pencil, Trash2, X, Check } from "lucide-react";
+import { api } from "~/trpc/react";
 
 import { ReactionBar } from "../ReactionBar";
 
@@ -45,6 +47,26 @@ export function CommentItem({
   currentUserId,
 }: CommentItemProps) {
   const [isReplying, setIsReplying] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(comment.content);
+  const [showMenu, setShowMenu] = useState(false);
+
+  const utils = api.useUtils();
+
+  const deleteComment = api.comments.delete.useMutation({
+    onSuccess: () => {
+      void utils.comments.getByPostId.invalidate({ postId });
+    },
+  });
+
+  const editComment = api.comments.edit.useMutation({
+    onSuccess: () => {
+      setIsEditing(false);
+      void utils.comments.getByPostId.invalidate({ postId });
+    },
+  });
+
+  const isAuthor = comment.author.id === currentUserId;
 
   const timeAgo = getTimeAgo(new Date(comment.createdAt));
 
@@ -89,25 +111,103 @@ export function CommentItem({
       </Link>
 
       <div className="min-w-0 flex-1">
-        <div className="rounded-2xl bg-gray-50/80 p-3 px-4 transition-colors hover:bg-gray-50">
+        <div className="group relative rounded-2xl border border-gray-200/50 bg-gray-100/80 p-3 px-4 transition-all hover:bg-gray-100 hover:shadow-sm">
           <div className="mb-1 flex items-center justify-between gap-4">
             <Link
               href={`/profile/${comment.author.id}`}
-              className="text-midnight hover:text-gold truncate text-sm font-semibold transition-colors"
+              className="text-midnight hover:text-gold truncate text-sm font-bold transition-colors"
             >
               {comment.author.name}
             </Link>
+
+            {/* Menu for Author */}
+            {isAuthor && !isEditing && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="rounded-full p-1 text-gray-400 hover:bg-black/5 hover:text-gray-600"
+                >
+                  <MoreHorizontal size={16} />
+                </button>
+                {showMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowMenu(false)}
+                    />
+                    <div className="absolute top-full left-0 z-50 mt-1 min-w-[120px] rounded-lg bg-white p-1 shadow-lg ring-1 ring-black/5">
+                      <button
+                        onClick={() => {
+                          setIsEditing(true);
+                          setShowMenu(false);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                      >
+                        <Pencil size={14} />
+                        <span>تعديل</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          void deleteComment.mutate({ commentId: comment.id });
+                        }}
+                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 size={14} />
+                        <span>حذف</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-          <p className="text-midnight/90 text-sm leading-relaxed break-words whitespace-pre-wrap">
-            {comment.content}
-          </p>
+
+          {isEditing ? (
+            <div className="mt-2">
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="min-h-[60px] w-full resize-none rounded-lg border border-gray-200 bg-white p-2 text-sm focus:border-[#D4AF37] focus:outline-none"
+                autoFocus
+              />
+              <div className="mt-2 flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditContent(comment.content);
+                  }}
+                  className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                >
+                  <X size={16} />
+                </button>
+                <button
+                  onClick={() => {
+                    editComment.mutate({
+                      commentId: comment.id,
+                      content: editContent,
+                    });
+                  }}
+                  className="rounded-md bg-[#D4AF37] p-1 text-white hover:bg-[#C5A028]"
+                  disabled={!editContent.trim()}
+                >
+                  <Check size={16} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-midnight/90 text-sm leading-relaxed break-words whitespace-pre-wrap">
+              {comment.content}
+            </p>
+          )}
         </div>
 
         <div className="mt-1 flex items-center gap-4 px-4">
-          <span className="text-midnight/40 text-[10px]">{timeAgo}</span>
+          <span className="text-[11px] font-medium text-gray-600">
+            {timeAgo}
+          </span>
           <button
             onClick={() => setIsReplying(!isReplying)}
-            className="text-midnight/60 hover:text-gold cursor-pointer text-[11px] font-medium transition-colors"
+            className="hover:text-gold text-midnight cursor-pointer text-[11px] font-bold transition-colors"
           >
             رد
           </button>
@@ -134,7 +234,7 @@ export function CommentItem({
         )}
 
         {comment.children && comment.children.length > 0 && (
-          <div className="mt-3 mr-3 space-y-4 border-r-2 border-gray-100 pr-3">
+          <div className="mt-3 mr-3 space-y-4 border-r-2 border-gray-200/80 pr-3">
             {comment.children.map((child) => (
               <CommentItem
                 key={child.id}

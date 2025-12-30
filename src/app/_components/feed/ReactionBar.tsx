@@ -129,7 +129,7 @@ export function ReactionBar({
     <div className="relative">
       {/* Compact view - click to expand */}
       <motion.button
-        className="flex items-center gap-2 rounded-xl bg-white/60 px-4 py-2 transition-all hover:bg-white/80"
+        className="text-midnight/70 hover:text-midnight border-midnight/5 flex items-center gap-2 rounded-xl border bg-gray-50/80 px-4 py-2 shadow-sm transition-all hover:bg-white hover:shadow-md"
         onClick={() => setIsExpanded(!isExpanded)}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}

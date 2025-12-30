@@ -4,7 +4,15 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Trash2, MoreHorizontal, Play, MessageCircle } from "lucide-react";
+import {
+  Trash2,
+  MoreHorizontal,
+  Play,
+  MessageCircle,
+  Pencil,
+  Check,
+  X,
+} from "lucide-react";
 import { ReactionBar } from "./ReactionBar";
 import { CommentSection } from "./comments/CommentSection";
 import { api } from "~/trpc/react";
@@ -48,9 +56,20 @@ export function PostCard({
   const [showMenu, setShowMenu] = useState(false);
   const [showComments, setShowComments] = useState(false);
 
+  // Edit State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
+
   const deletePost = api.feed.deletePost.useMutation({
     onSuccess: () => {
       setIsDeleted(true);
+    },
+  });
+
+  const editPost = api.feed.editPost.useMutation({
+    onSuccess: () => {
+      setIsEditing(false);
+      setShowMenu(false);
     },
   });
 
@@ -99,12 +118,14 @@ export function PostCard({
             <h3 className="text-midnight group-hover:text-gold truncate text-base font-semibold transition-colors">
               {post.authorName}
             </h3>
-            <p className="text-midnight/50 text-xs sm:text-sm">{timeAgo}</p>
+            <p className="text-xs font-medium text-gray-700 sm:text-sm">
+              {timeAgo}
+            </p>
           </div>
         </Link>
 
         {/* Menu */}
-        {isAuthor && (
+        {isAuthor && !isEditing && (
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
@@ -121,8 +142,18 @@ export function PostCard({
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="absolute top-full left-0 z-50 mt-1 rounded-xl bg-white p-2 shadow-lg"
+                  className="absolute top-full left-0 z-50 mt-1 min-w-[140px] rounded-xl bg-white p-2 shadow-lg ring-1 ring-black/5"
                 >
+                  <button
+                    onClick={() => {
+                      setIsEditing(true);
+                      setShowMenu(false);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
+                  >
+                    <Pencil size={16} />
+                    <span>تعديل</span>
+                  </button>
                   <button
                     onClick={() => {
                       void deletePost.mutateAsync({
@@ -144,11 +175,52 @@ export function PostCard({
       </div>
 
       {/* Content */}
-      <p
-        className={`text-midnight mb-4 leading-relaxed whitespace-pre-wrap ${isCompact ? "line-clamp-2" : ""}`}
-      >
-        {post.content}
-      </p>
+      {isEditing ? (
+        <div className="mb-4">
+          <textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            className="min-h-[100px] w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-3 text-right focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] focus:outline-none"
+            autoFocus
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              onClick={() => {
+                setIsEditing(false);
+                setEditContent(post.content);
+              }}
+              className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100"
+              disabled={editPost.isPending}
+            >
+              <X size={16} />
+              إلغاء
+            </button>
+            <button
+              onClick={() => {
+                void editPost.mutateAsync({
+                  postId: post.id,
+                  content: editContent,
+                });
+              }}
+              className="flex items-center gap-1 rounded-lg bg-[#D4AF37] px-3 py-1.5 text-sm text-white hover:bg-[#C5A028] disabled:opacity-50"
+              disabled={editPost.isPending || !editContent.trim()}
+            >
+              {editPost.isPending ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : (
+                <Check size={16} />
+              )}
+              حفظ
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p
+          className={`text-midnight mb-4 leading-relaxed whitespace-pre-wrap ${isCompact ? "line-clamp-2" : ""}`}
+        >
+          {post.content}
+        </p>
+      )}
 
       {/* Media Grid */}
       {post.media.length > 0 && (
@@ -216,8 +288,8 @@ export function PostCard({
             onClick={() => setShowComments(!showComments)}
             className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
               showComments
-                ? "bg-gold/10 text-gold"
-                : "text-midnight hover:text-gold bg-white/60 hover:bg-white/80"
+                ? "bg-gold/10 text-gold border-gold/20 border"
+                : "text-midnight/70 hover:text-gold hover:border-gold/20 border border-transparent bg-gray-100/80 hover:bg-gray-100"
             }`}
           >
             <MessageCircle size={20} />

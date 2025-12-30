@@ -49,7 +49,7 @@ export function CommentForm({
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder={parentId ? "اكتب ردك..." : "اكتب تعليقاً..."}
-          className="focus:ring-gold/50 min-h-[46px] w-full resize-none rounded-2xl bg-gray-50 p-3 pr-4 pl-12 text-right text-sm transition-all focus:ring-2 focus:outline-none"
+          className="focus:ring-gold/50 min-h-[46px] w-full resize-none rounded-2xl bg-gray-100 p-3 pr-4 pl-12 text-right text-sm transition-all focus:bg-white focus:ring-2 focus:outline-none"
           rows={1}
           style={{
             height:
@@ -63,7 +63,7 @@ export function CommentForm({
         <button
           type="submit"
           disabled={createComment.isPending || !content.trim()}
-          className="bg-gold absolute bottom-1.5 left-1.5 rounded-xl p-2 text-white transition-all hover:scale-105 active:scale-95 disabled:scale-100 disabled:opacity-50"
+          className="bg-gold absolute top-1/2 left-1.5 -translate-y-1/2 rounded-xl p-2 text-white transition-all hover:scale-105 active:scale-95 disabled:scale-100 disabled:opacity-50"
         >
           <Send
             size={16}

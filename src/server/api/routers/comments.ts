@@ -39,4 +39,40 @@ export const commentsRouter = createTRPCRouter({
       });
       return allComments;
     }),
+
+  edit: protectedProcedure
+    .input(
+      z.object({
+        commentId: z.string().uuid(),
+        content: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const existingComment = await ctx.db.query.comments.findFirst({
+        where: eq(comments.id, input.commentId),
+      });
+
+      if (!existingComment || existingComment.authorId !== ctx.session.user.id) {
+        throw new Error("Unauthorized");
+      }
+
+      await ctx.db
+        .update(comments)
+        .set({ content: input.content })
+        .where(eq(comments.id, input.commentId));
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ commentId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const existingComment = await ctx.db.query.comments.findFirst({
+        where: eq(comments.id, input.commentId),
+      });
+
+      if (!existingComment || existingComment.authorId !== ctx.session.user.id) {
+        throw new Error("Unauthorized");
+      }
+
+      await ctx.db.delete(comments).where(eq(comments.id, input.commentId));
+    }),
 });

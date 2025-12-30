@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { eq, desc, and, lt, sql } from "drizzle-orm";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, publicProcedure, protectedProcedure } from "~/server/api/trpc";
 import {
   socialPosts,
   postMedia,
@@ -240,6 +240,37 @@ export const feedRouter = createTRPCRouter({
       await ctx.db.delete(socialPosts).where(eq(socialPosts.id, input.postId));
 
       return { success: true };
+    }),
+
+  // Edit a post (only by author)
+  editPost: protectedProcedure
+    .input(
+      z.object({
+        postId: z.string().uuid(),
+        content: z.string().min(1).max(2000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [post] = await ctx.db
+        .select({ authorId: socialPosts.authorId })
+        .from(socialPosts)
+        .where(eq(socialPosts.id, input.postId))
+        .limit(1);
+
+      if (!post || post.authorId !== ctx.session.user.id) {
+        throw new Error("غير مصرح لك بتعديل هذا المنشور");
+      }
+
+      const [updatedPost] = await ctx.db
+        .update(socialPosts)
+        .set({
+          content: input.content,
+          updatedAt: new Date(),
+        })
+        .where(eq(socialPosts.id, input.postId))
+        .returning();
+
+      return updatedPost;
     }),
 
   // Get single post by ID
