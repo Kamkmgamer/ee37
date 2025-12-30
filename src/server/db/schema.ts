@@ -25,6 +25,12 @@ export const conversationTypeEnum = pgEnum("conversation_type", [
   "private",
   "group",
 ]);
+export const materialTypeEnum = pgEnum("material_type", [
+  "pdf",
+  "video",
+  "link",
+  "other",
+]);
 
 // Survey Submissions Table
 export const submissions = createTable(
@@ -202,6 +208,63 @@ export const commentReactions = createTable(
     unique("comment_reaction_unique").on(t.commentId, t.userId),
   ],
 );
+
+// Academic Library Tables
+export const subjects = createTable(
+  "subject",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    name: d.varchar({ length: 256 }).notNull(),
+    code: d.varchar({ length: 50 }).notNull(),
+    semester: d.integer().notNull(),
+    icon: d.varchar({ length: 50 }).notNull(),
+    accentColor: d.varchar({ length: 50 }).notNull(),
+    description: d.text(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  }),
+  (t) => [index("subject_code_idx").on(t.code)],
+);
+
+export const academicMaterials = createTable(
+  "academic_material",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    subjectId: d.uuid().notNull().references(() => subjects.id, { onDelete: "cascade" }),
+    uploaderId: d.uuid().notNull().references(() => users.id, { onDelete: "set null" }),
+    title: d.varchar({ length: 256 }).notNull(),
+    description: d.text(),
+    type: materialTypeEnum().notNull(),
+    fileUrl: d.text().notNull(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  }),
+  (t) => [
+    index("material_subject_idx").on(t.subjectId),
+    index("material_uploader_idx").on(t.uploaderId),
+  ],
+);
+
+export const subjectsRelations = relations(subjects, ({ many }) => ({
+  materials: many(academicMaterials),
+}));
+
+export const academicMaterialsRelations = relations(academicMaterials, ({ one }) => ({
+  subject: one(subjects, {
+    fields: [academicMaterials.subjectId],
+    references: [subjects.id],
+  }),
+  uploader: one(users, {
+    fields: [academicMaterials.uploaderId],
+    references: [users.id],
+  }),
+}));
 
 // Chat System Tables
 
