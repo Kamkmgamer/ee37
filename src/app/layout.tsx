@@ -6,6 +6,7 @@ import { IBM_Plex_Sans_Arabic, Noto_Kufi_Arabic } from "next/font/google";
 import { ToastProvider } from "./_components/ui/Toast";
 import { TRPCReactProvider } from "~/trpc/react";
 import { ChatWidgetWrapper } from "./_components/ChatWidgetWrapper";
+import { MediaViewer } from "./_components/feed/MediaViewer";
 import { verifySession } from "~/lib/session";
 
 export const metadata: Metadata = {
@@ -45,6 +46,7 @@ export default async function RootLayout({
           <ToastProvider>
             {children}
             {session && <ChatWidgetWrapper userId={session.userId} />}
+            <MediaViewer />
           </ToastProvider>
         </TRPCReactProvider>
       </body>

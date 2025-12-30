@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Trash2,
@@ -52,6 +53,10 @@ export function PostCard({
   userReaction,
   variant = "default",
 }: PostCardProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [isDeleted, setIsDeleted] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -59,6 +64,16 @@ export function PostCard({
   // Edit State
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+
+  const handleMediaClick = (media: PostMedia) => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.set("media", "true");
+    newParams.set("mediaUrl", media.mediaUrl);
+    newParams.set("mediaType", media.mediaType);
+    newParams.set("postId", post.id);
+    newParams.set("authorName", post.authorName);
+    router.replace(`${pathname}?${newParams.toString()}`, { scroll: false });
+  };
 
   const deletePost = api.feed.deletePost.useMutation({
     onSuccess: () => {
@@ -237,9 +252,10 @@ export function PostCard({
         >
           {(isCompact ? post.media.slice(0, 1) : post.media).map(
             (media, index) => (
-              <div
+              <button
                 key={media.id}
-                className={`relative overflow-hidden rounded-xl ${
+                onClick={() => handleMediaClick(media)}
+                className={`group relative overflow-hidden rounded-xl transition-transform hover:scale-[1.02] active:scale-[0.98] ${
                   post.media.length === 3 && index === 0 ? "col-span-2" : ""
                 } ${post.media.length === 1 ? "aspect-video" : "aspect-square"}`}
               >
@@ -257,17 +273,44 @@ export function PostCard({
                       className="h-full w-full object-cover"
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="rounded-full bg-white/90 p-4">
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        className="rounded-full bg-white/90 p-4 shadow-lg transition-transform"
+                      >
                         <Play
                           size={24}
                           className="text-midnight"
                           fill="currentColor"
                         />
-                      </div>
+                      </motion.div>
                     </div>
                   </div>
                 )}
-              </div>
+                <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
+                {media.mediaType === "image" && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    whileHover={{ opacity: 1 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    <div className="rounded-full bg-white/90 p-4 shadow-lg">
+                      <svg
+                        className="text-midnight h-6 w-6"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"
+                        />
+                      </svg>
+                    </div>
+                  </motion.div>
+                )}
+              </button>
             ),
           )}
         </div>
