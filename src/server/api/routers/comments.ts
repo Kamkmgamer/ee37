@@ -1,7 +1,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
-import { comments } from "~/server/db/schema";
+import { comments, notifications, socialPosts } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 
 export const commentsRouter = createTRPCRouter({
@@ -14,12 +14,57 @@ export const commentsRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      await ctx.db.insert(comments).values({
-        postId: input.postId,
-        authorId: ctx.session.user.id,
-        content: input.content,
-        parentId: input.parentId,
+      const [newComment] = await ctx.db
+        .insert(comments)
+        .values({
+          postId: input.postId,
+          authorId: ctx.session.user.id,
+          content: input.content,
+          parentId: input.parentId,
+        })
+        .returning();
+
+      // Notifications Logic
+      const post = await ctx.db.query.socialPosts.findFirst({
+        where: eq(socialPosts.id, input.postId), 
+        columns: { authorId: true },
       });
+
+      if (!post) return; 
+
+      const notificationsMap = new Map<string, "new_comment" | "comment_reply">();
+
+      // 1. Potential notification for post author
+      if (post.authorId !== ctx.session.user.id) {
+        notificationsMap.set(post.authorId, "new_comment");
+      }
+
+      // 2. Potential notification for parent comment author
+      if (input.parentId) {
+        const parentComment = await ctx.db.query.comments.findFirst({
+          where: eq(comments.id, input.parentId),
+          columns: { authorId: true },
+        });
+
+        if (parentComment && parentComment.authorId !== ctx.session.user.id) {
+          notificationsMap.set(parentComment.authorId, "comment_reply");
+        }
+      }
+
+      // 3. Create notifications
+      const notificationPromises = Array.from(notificationsMap.entries()).map(
+        ([recipientId, type]) => {
+          return ctx.db.insert(notifications).values({
+            recipientId,
+            actorId: ctx.session.user.id,
+            type,
+            postId: input.postId,
+            commentId: newComment?.id,
+          });
+        }
+      );
+
+      await Promise.all(notificationPromises);
     }),
 
   getByPostId: publicProcedure

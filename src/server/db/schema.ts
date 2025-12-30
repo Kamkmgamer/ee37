@@ -21,6 +21,13 @@ export const reactionTypeEnum = pgEnum("reaction_type", [
   "wow",
   "sad",
 ]);
+
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "post_reaction",
+  "comment_reaction",
+  "new_comment",
+  "comment_reply",
+]);
 export const conversationTypeEnum = pgEnum("conversation_type", [
   "private",
   "group",
@@ -369,6 +376,32 @@ export const messageReactions = createTable(
   ],
 );
 
+// Notifications Table
+export const notifications = createTable(
+  "notification",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    recipientId: d.uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    actorId: d.uuid().notNull().references(() => users.id, { onDelete: "cascade" }),
+    type: notificationTypeEnum().notNull(),
+    
+    // Optional references for context
+    postId: d.uuid().references(() => socialPosts.id, { onDelete: "cascade" }),
+    commentId: d.uuid().references(() => comments.id, { onDelete: "cascade" }),
+    
+    isRead: d.boolean().default(false).notNull(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("notification_recipient_idx").on(t.recipientId),
+    index("notification_created_idx").on(t.createdAt),
+    index("notification_unread_idx").on(t.recipientId, t.isRead),
+  ],
+);
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   profile: one(userProfiles, {
@@ -503,5 +536,26 @@ export const messageMediaRelations = relations(messageMedia, ({ one }) => ({
   message: one(messages, {
     fields: [messageMedia.messageId],
     references: [messages.id],
+  }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  recipient: one(users, {
+    fields: [notifications.recipientId],
+    references: [users.id],
+    relationName: "notification_recipient",
+  }),
+  actor: one(users, {
+    fields: [notifications.actorId],
+    references: [users.id],
+    relationName: "notification_actor",
+  }),
+  post: one(socialPosts, {
+    fields: [notifications.postId],
+    references: [socialPosts.id],
+  }),
+  comment: one(comments, {
+    fields: [notifications.commentId],
+    references: [comments.id],
   }),
 }));

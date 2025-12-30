@@ -5,6 +5,7 @@ import { verifySession, deleteSession } from "~/lib/session";
 import { api } from "~/trpc/server";
 import { CreatePostForm } from "../_components/feed/CreatePostForm";
 import { FeedClient } from "./FeedClient";
+import { NotificationsPopover } from "../_components/notifications/NotificationsPopover";
 
 export default async function FeedPage() {
   const session = await verifySession();
@@ -46,6 +47,7 @@ export default async function FeedPage() {
             >
               <User size={20} />
             </Link>
+            <NotificationsPopover />
             <form
               action={async () => {
                 "use server";

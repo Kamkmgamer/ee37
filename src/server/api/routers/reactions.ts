@@ -1,4 +1,4 @@
-import { postReactions, commentReactions } from "~/server/db/schema";
+import { postReactions, commentReactions, notifications, socialPosts, comments } from "~/server/db/schema";
 
 import { z } from "zod";
 import { and, eq, sql } from "drizzle-orm";
@@ -26,6 +26,14 @@ export const reactionsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // Check if reaction already exists
+      const existingReaction = await ctx.db.query.postReactions.findFirst({
+        where: and(
+          eq(postReactions.postId, input.postId),
+          eq(postReactions.userId, input.userId)
+        ),
+      });
+
       // Upsert reaction (one reaction per user per post)
       await ctx.db
         .insert(postReactions)
@@ -40,6 +48,23 @@ export const reactionsRouter = createTRPCRouter({
             reactionType: input.reactionType,
           },
         });
+
+      // Create notification if new reaction
+      if (!existingReaction) {
+        const post = await ctx.db.query.socialPosts.findFirst({
+          where: eq(socialPosts.id, input.postId),
+          columns: { authorId: true },
+        });
+
+        if (post && post.authorId !== input.userId) {
+          await ctx.db.insert(notifications).values({
+            recipientId: post.authorId,
+            actorId: input.userId,
+            type: "post_reaction",
+            postId: input.postId,
+          });
+        }
+      }
 
       return { success: true };
     }),
@@ -75,6 +100,14 @@ export const reactionsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // Check if reaction already exists
+      const existingReaction = await ctx.db.query.commentReactions.findFirst({
+        where: and(
+          eq(commentReactions.commentId, input.commentId),
+          eq(commentReactions.userId, input.userId)
+        ),
+      });
+
       // Upsert reaction (one reaction per user per comment)
       await ctx.db
         .insert(commentReactions)
@@ -89,6 +122,24 @@ export const reactionsRouter = createTRPCRouter({
             reactionType: input.reactionType,
           },
         });
+
+      // Create notification if new reaction
+      if (!existingReaction) {
+        const comment = await ctx.db.query.comments.findFirst({
+          where: eq(comments.id, input.commentId),
+          columns: { authorId: true, postId: true },
+        });
+
+        if (comment && comment.authorId !== input.userId) {
+          await ctx.db.insert(notifications).values({
+            recipientId: comment.authorId,
+            actorId: input.userId,
+            type: "comment_reaction",
+            commentId: input.commentId,
+            postId: comment.postId, // Helpful to have context
+          });
+        }
+      }
 
       return { success: true };
     }),

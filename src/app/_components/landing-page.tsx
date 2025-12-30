@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { logout } from "../actions/auth";
 import { FeedPreview } from "./feed/FeedPreview";
+import { NotificationsPopover } from "./notifications/NotificationsPopover";
 
 interface PostMedia {
   id: string;
@@ -78,6 +79,7 @@ export default function LandingPage({
                 <span className="hidden text-sm font-medium text-[var(--color-midnight)] underline decoration-[var(--color-gold)] decoration-2 underline-offset-4 sm:block">
                   {user.name}
                 </span>
+                <NotificationsPopover />
                 <button
                   onClick={() => logout()}
                   className="flex items-center gap-2 rounded-full bg-[var(--color-midnight)]/5 px-3 py-1.5 text-sm font-medium text-[var(--color-midnight)] transition-colors hover:bg-[var(--color-midnight)] hover:text-[var(--color-gold)]"
