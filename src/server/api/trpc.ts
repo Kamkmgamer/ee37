@@ -1,4 +1,3 @@
-
 /**
  * YOU PROBABLY DON'T NEED TO EDIT THIS FILE, UNLESS:
  * 1. You want to modify request context (see Part 1).
@@ -13,6 +12,8 @@ import { ZodError } from "zod";
 import { verifySession } from "~/lib/session";
 
 import { db } from "~/server/db";
+import { eq, and, or, isNull, gt } from "drizzle-orm";
+import { userRestrictions } from "~/server/db/schema";
 
 /**
  * 1. CONTEXT
@@ -28,23 +29,61 @@ import { db } from "~/server/db";
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
   const session = await verifySession();
-  
+
   let userData = null;
+  let isBanned = false;
+  let isMuted = false;
+
   if (session) {
     userData = await db.query.users.findFirst({
       where: (u, { eq }) => eq(u.id, session.userId),
     });
+
+    if (userData) {
+      const now = new Date();
+
+      const banRestriction = await db.query.userRestrictions.findFirst({
+        where: and(
+          eq(userRestrictions.userId, session.userId),
+          eq(userRestrictions.type, "ban"),
+          or(
+            isNull(userRestrictions.expiresAt),
+            gt(userRestrictions.expiresAt, now),
+          ),
+        ),
+      });
+      isBanned = !!banRestriction;
+
+      const muteRestriction = await db.query.userRestrictions.findFirst({
+        where: and(
+          eq(userRestrictions.userId, session.userId),
+          eq(userRestrictions.type, "mute"),
+          or(
+            isNull(userRestrictions.expiresAt),
+            gt(userRestrictions.expiresAt, now),
+          ),
+        ),
+      });
+      isMuted = !!muteRestriction;
+    }
   }
 
   return {
     db,
-    session: session && userData ? { 
-      user: { 
-        id: session.userId, 
-        ...session,
-        isAdmin: userData.isAdmin,
-      } 
-    } : null,
+    session:
+      session && userData
+        ? {
+            user: {
+              id: session.userId,
+              userId: session.userId,
+              email: session.email,
+              name: session.name,
+              isAdmin: userData.isAdmin,
+              isBanned,
+              isMuted,
+            },
+          }
+        : null,
     ...opts,
   };
 };
@@ -146,13 +185,55 @@ export const protectedProcedure = t.procedure
   });
 
 /**
+ * Restricted procedure - for users who are not banned
+ *
+ * This extends protectedProcedure to also check if the user is banned.
+ */
+export const restrictedProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.session.user.isBanned) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Your account has been banned.",
+    });
+  }
+  return next({
+    ctx: {
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  });
+});
+
+/**
+ * Unmuted procedure - for users who are not banned or muted
+ *
+ * This extends restrictedProcedure to also check if the user is muted.
+ * Use this for operations that require posting capabilities (comments, posts, chat).
+ */
+export const unmutedProcedure = restrictedProcedure.use(({ ctx, next }) => {
+  if (ctx.session.user.isMuted) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You are temporarily muted and cannot post.",
+    });
+  }
+  return next({
+    ctx: {
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  });
+});
+
+/**
  * Admin procedure
  *
  * Use this for moderation and administrative actions.
  */
 export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (!ctx.session.user.isAdmin) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Admin access required",
+    });
   }
   return next({
     ctx: {
