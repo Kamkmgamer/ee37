@@ -17,10 +17,9 @@ export function NotificationsPopover() {
 
   // Queries
   const { data: unreadCount = 0, refetch: refetchCount } =
-    api.notifications.getUnreadCount.useQuery(
-      undefined,
-      { refetchInterval: 30000 },
-    );
+    api.notifications.getUnreadCount.useQuery(undefined, {
+      refetchInterval: 30000,
+    });
 
   const {
     data: notifications,
@@ -115,8 +114,6 @@ export function NotificationsPopover() {
   };
 
   const getLink = (notification: Notification) => {
-    // Assuming feed supports anchor links or we just go to feed.
-    // Ideally /feed?postId=...
     return `/feed#post-${notification.postId ?? ""}`;
   };
 
@@ -135,7 +132,7 @@ export function NotificationsPopover() {
       </button>
 
       {isOpen && (
-        <div className="border-midnight/10 absolute left-0 right-auto z-50 mt-2 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border bg-white shadow-xl ring-1 ring-black/5 md:left-auto md:right-0">
+        <div className="border-midnight/10 absolute left-0 z-50 mt-2 w-[calc(100vw-2rem)] max-w-[320px] overflow-hidden rounded-2xl border bg-white shadow-xl ring-1 ring-black/5 sm:w-80">
           <div className="border-midnight/5 flex items-center justify-between border-b bg-gray-50/50 p-3">
             <h3 className="text-midnight text-sm font-bold">الإشعارات</h3>
             {unreadCount > 0 && (
