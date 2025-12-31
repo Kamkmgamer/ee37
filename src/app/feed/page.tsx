@@ -28,6 +28,7 @@ export default async function FeedPage() {
       <PageHeader
         title="المنشورات"
         showNav={true}
+        showBack={true}
         activeNav="feed"
         isAdmin={profile?.isAdmin ?? false}
       />

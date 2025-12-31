@@ -10,6 +10,7 @@ import {
   LogOut,
   User,
   MessageSquare,
+  ArrowRight,
 } from "lucide-react";
 import { logout } from "../actions/auth";
 import { FeedPreview } from "./feed/FeedPreview";
@@ -76,6 +77,13 @@ export default function LandingPage({
           <div className="flex items-center gap-4">
             {user ? (
               <div className="flex items-center gap-3">
+                <Link
+                  href="/feed"
+                  className="hidden items-center gap-2 rounded-full bg-gradient-to-r from-[var(--color-gold)] to-[var(--color-copper)] px-4 py-2 text-sm font-medium text-[var(--color-midnight)] shadow-lg transition-transform hover:scale-105 sm:flex"
+                >
+                  <span>المنشورات</span>
+                  <ArrowRight size={16} />
+                </Link>
                 <span className="hidden text-sm font-medium text-[var(--color-midnight)] underline decoration-[var(--color-gold)] decoration-2 underline-offset-4 sm:block">
                   {user.name}
                 </span>
