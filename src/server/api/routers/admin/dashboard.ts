@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { createTRPCRouter, adminProcedure } from "~/server/api/trpc";
 import {
   users,
@@ -7,7 +6,7 @@ import {
   reports,
   userRestrictions,
 } from "~/server/db/schema";
-import { eq, desc, sql, and, gte, count, or } from "drizzle-orm";
+import { eq, sql, gte } from "drizzle-orm";
 
 export const adminDashboardRouter = createTRPCRouter({
   getStats: adminProcedure.query(async ({ ctx }) => {
