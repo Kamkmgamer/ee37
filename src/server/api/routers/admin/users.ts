@@ -7,7 +7,7 @@ import {
   reports,
   adminAuditLog,
 } from "~/server/db/schema";
-import { eq, desc, like, or, sql } from "drizzle-orm";
+import { eq, desc, like, or, inArray, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 export const adminUsersRouter = createTRPCRouter({
@@ -28,7 +28,8 @@ export const adminUsersRouter = createTRPCRouter({
           )
         : undefined;
 
-      const userList = await ctx.db
+      // Build the base query and only apply WHERE when we actually have conditions.
+      const baseQuery = ctx.db
         .select({
           id: users.id,
           name: users.name,
@@ -39,8 +40,11 @@ export const adminUsersRouter = createTRPCRouter({
           avatarUrl: userProfiles.avatarUrl,
         })
         .from(users)
-        .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
-        .where(conditions)
+        .leftJoin(userProfiles, eq(users.id, userProfiles.userId));
+
+      const userList = await (conditions
+        ? baseQuery.where(conditions)
+        : baseQuery)
         .orderBy(desc(users.createdAt))
         .limit(input.limit + 1);
 
@@ -50,7 +54,31 @@ export const adminUsersRouter = createTRPCRouter({
         ? usersResult[usersResult.length - 1]?.id
         : undefined;
 
-      return { users: usersResult, nextCursor };
+      // Fetch restrictions for the fetched users
+      const userIds = usersResult.map((u) => u.id);
+      
+      let restrictionsMap: Record<string, typeof userRestrictions.$inferSelect[]> = {};
+      
+      if (userIds.length > 0) {
+        const restrictions = await ctx.db
+          .select()
+          .from(userRestrictions)
+          .where(inArray(userRestrictions.userId, userIds))
+          .orderBy(desc(userRestrictions.createdAt));
+
+        restrictionsMap = restrictions.reduce((acc, r) => {
+          acc[r.userId] ??= [];
+          acc[r.userId]!.push(r);
+          return acc;
+        }, {} as Record<string, typeof userRestrictions.$inferSelect[]>);
+      }
+
+      const formattedUsers = usersResult.map((user) => ({
+        ...user,
+        restrictions: restrictionsMap[user.id] ?? [],
+      }));
+
+      return { users: formattedUsers, nextCursor };
     }),
 
   getById: adminProcedure
