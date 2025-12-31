@@ -13,8 +13,10 @@ import {
   Globe,
   Server,
   Code,
+  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "../_components/PageHeader";
 import { api } from "~/trpc/react";
 
 const iconMap: Record<string, LucideIcon> = {
@@ -44,28 +46,7 @@ export default function LearningPage() {
         <div className="bg-gradient-radial absolute top-0 left-1/4 h-[500px] w-[500px] rounded-full from-[var(--color-gold)]/10 to-transparent blur-3xl" />
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-[var(--color-midnight)]/5 bg-[var(--color-paper)]/80 px-6 py-4 backdrop-blur-xl">
-        <Link href="/" className="group">
-          <motion.div
-            whileHover={{ x: 5, rotate: -5 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-midnight)] text-[var(--color-sand)] shadow-lg"
-          >
-            <span className="text-lg font-bold">→</span>
-          </motion.div>
-        </Link>
-        <div className="flex items-center gap-2">
-          <BookOpen size={16} className="text-[var(--color-gold)]" />
-          <span
-            className="font-bold text-[var(--color-midnight)]"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            المكتبة الأكاديمية
-          </span>
-        </div>
-        <div className="w-12" /> {/* Spacer */}
-      </header>
+      <PageHeader title="المكتبة الأكاديمية" showBack={true} />
 
       <main className="relative z-10 mx-auto max-w-3xl px-6 py-12">
         {/* Hero */}

@@ -5,7 +5,8 @@ import { api } from "~/trpc/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, MessageCircle, User, ArrowRight } from "lucide-react";
+import { Search, MessageCircle, User } from "lucide-react";
+import { PageHeader } from "../_components/PageHeader";
 import { motion } from "framer-motion";
 
 export default function PeoplePage() {
@@ -32,22 +33,7 @@ export default function PeoplePage() {
 
   return (
     <div className="bg-paper min-h-screen">
-      {/* Header */}
-      <header className="border-midnight/10 bg-paper/80 sticky top-0 z-40 border-b backdrop-blur-md">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="text-midnight/60 hover:bg-midnight/5 rounded-xl p-2 transition-colors"
-            >
-              <ArrowRight size={20} />
-            </Link>
-            <h1 className="font-display text-midnight text-xl font-bold">
-              البحث عن الأصدقاء
-            </h1>
-          </div>
-        </div>
-      </header>
+      <PageHeader title="البحث عن الأصدقاء" showBack={true} />
 
       <main className="mx-auto max-w-4xl px-4 py-8">
         {/* Search Input */}

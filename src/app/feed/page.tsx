@@ -1,11 +1,9 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { Home, User, LogOut, ShieldCheck } from "lucide-react";
-import { verifySession, deleteSession } from "~/lib/session";
+import { verifySession } from "~/lib/session";
 import { api } from "~/trpc/server";
 import { CreatePostForm } from "../_components/feed/CreatePostForm";
 import { FeedClient } from "./FeedClient";
-import { NotificationsPopover } from "../_components/notifications/NotificationsPopover";
+import { PageHeader } from "../_components/PageHeader";
 
 export default async function FeedPage() {
   const session = await verifySession();
@@ -27,54 +25,13 @@ export default async function FeedPage() {
 
   return (
     <div className="bg-paper min-h-screen">
-      {/* Header */}
-      <header className="border-midnight/10 bg-paper/80 sticky top-0 z-40 border-b backdrop-blur-md">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
-          <h1 className="font-display text-midnight text-xl font-bold">
-            المنشورات
-          </h1>
-          <nav className="flex items-center gap-2">
-            {profile?.isAdmin && (
-              <Link
-                href="/moderation"
-                className="text-midnight/60 hover:bg-midnight/5 rounded-xl p-2 transition-colors"
-                title="الإشراف"
-              >
-                <ShieldCheck size={20} className="text-orange-600" />
-              </Link>
-            )}
-            <Link
-              href="/feed"
-              className="bg-gold/10 text-gold hover:bg-gold/20 rounded-xl p-2 transition-colors"
-            >
-              <Home size={20} />
-            </Link>
-            <Link
-              href="/profile"
-              className="text-midnight/60 hover:bg-midnight/5 rounded-xl p-2 transition-colors"
-            >
-              <User size={20} />
-            </Link>
-            <NotificationsPopover />
-            <form
-              action={async () => {
-                "use server";
-                await deleteSession();
-                redirect("/login");
-              }}
-            >
-              <button
-                type="submit"
-                className="text-midnight/60 rounded-xl p-2 transition-colors hover:bg-red-50 hover:text-red-500"
-              >
-                <LogOut size={20} />
-              </button>
-            </form>
-          </nav>
-        </div>
-      </header>
+      <PageHeader
+        title="المنشورات"
+        showNav={true}
+        activeNav="feed"
+        isAdmin={profile?.isAdmin ?? false}
+      />
 
-      {/* Main content */}
       <main className="mx-auto max-w-2xl px-4 py-6">
         {/* Create post form */}
         <div className="mb-6">

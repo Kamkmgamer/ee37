@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Plus, X, User, Quote, Zap } from "lucide-react";
+import { Plus, X, User, Quote, Zap, ArrowRight } from "lucide-react";
+import { PageHeader } from "../_components/PageHeader";
 
 interface Submission {
   id: string;
@@ -83,38 +84,21 @@ export default function GalleryPage() {
         />
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-[var(--color-midnight)]/5 bg-[var(--color-paper)]/80 px-6 py-4 backdrop-blur-xl">
-        <Link href="/" className="group">
-          <motion.div
-            whileHover={{ x: 5, rotate: -5 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-midnight)] text-[var(--color-sand)] shadow-lg transition-shadow group-hover:shadow-xl"
-          >
-            <span className="text-lg font-bold">→</span>
-          </motion.div>
-        </Link>
-
-        <div className="flex items-center gap-2">
-          <Zap size={16} className="text-[var(--color-gold)]" />
-          <span
-            className="font-bold text-[var(--color-midnight)]"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            معرض الذكريات
-          </span>
-        </div>
-
-        <Link href="/survey">
-          <motion.div
-            whileHover={{ scale: 1.1, rotate: 90 }}
-            whileTap={{ scale: 0.9 }}
-            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-gold)] to-[var(--color-copper)] text-white shadow-[var(--color-gold)]/30 shadow-lg"
-          >
-            <Plus size={22} />
-          </motion.div>
-        </Link>
-      </header>
+      <PageHeader
+        title="معرض الذكريات"
+        showBack={true}
+        rightAction={
+          <Link href="/survey">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-gold)] to-[var(--color-copper)] text-white shadow-[var(--color-gold)]/30 shadow-lg"
+            >
+              <Plus size={22} />
+            </motion.div>
+          </Link>
+        }
+      />
 
       <main className="relative z-10 mx-auto max-w-6xl px-4 py-12 md:px-8">
         {/* Hero */}
