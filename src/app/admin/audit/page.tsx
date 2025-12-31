@@ -4,7 +4,7 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { Search, History, User } from "lucide-react";
+import { History, User } from "lucide-react";
 
 export default function AdminAuditPage() {
   const [actionFilter, setActionFilter] = useState("");
@@ -75,7 +75,7 @@ export default function AdminAuditPage() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-gray-900">
-                        {log.actorName || "Unknown"}
+                        {log.actorName ?? "Unknown"}
                       </span>
                       <span
                         className={`rounded px-2 py-0.5 text-xs font-medium ${getActionColor(log.actionType)}`}
