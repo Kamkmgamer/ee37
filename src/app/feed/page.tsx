@@ -20,7 +20,6 @@ export default async function FeedPage() {
     posts.length > 0
       ? await api.reactions.getUserReactionsForPosts({
           postIds: posts.map((p) => p.id),
-          userId: session.userId,
         })
       : {};
 
@@ -80,7 +79,7 @@ export default async function FeedPage() {
         {/* Create post form */}
         <div className="mb-6">
           <CreatePostForm
-            userId={session.userId}
+            _userId={session.userId}
             userName={session.name}
             userAvatar={profile?.avatarUrl}
           />

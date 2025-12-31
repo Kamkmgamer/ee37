@@ -55,7 +55,7 @@ export function FeedClient({
   // Poll for user reactions for ALL visible posts
   const { data: userReactionsData } =
     api.reactions.getUserReactionsForPosts.useQuery(
-      { postIds: allPostIds, userId: currentUserId },
+      { postIds: allPostIds },
       {
         refetchInterval: 3000,
         enabled: allPostIds.length > 0,
