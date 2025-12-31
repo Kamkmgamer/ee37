@@ -17,6 +17,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -40,20 +41,28 @@ export function AdminLayoutClient({
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-gray-100" dir="rtl">
+    <div className="min-h-screen bg-[#faf7f0]" dir="rtl">
       <div className="flex h-screen overflow-hidden">
         {/* Mobile Sidebar Overlay */}
-        {isSidebarOpen && (
-          <div
-            className="fixed inset-0 z-20 bg-black/50 lg:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Sidebar */}
-        <aside
+        <motion.aside
+          initial={{ x: 64, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 32 }}
           className={cn(
-            "bg-midnight fixed inset-y-0 right-0 z-30 flex flex-col text-white shadow-xl transition-all duration-300 lg:static",
+            "bg-midnight geometric-pattern fixed inset-y-0 right-0 z-30 flex flex-col text-white shadow-xl transition-all duration-300 lg:static",
             isCollapsed ? "w-20" : "w-64",
             isSidebarOpen
               ? "translate-x-0"
@@ -61,7 +70,15 @@ export function AdminLayoutClient({
           )}
         >
           <div className="flex h-16 items-center justify-between border-b border-gray-700 px-4">
-            {!isCollapsed && <h1 className="text-xl font-bold">EE37 Admin</h1>}
+            {!isCollapsed && (
+              <motion.h1
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-xl font-bold"
+              >
+                EE37 Admin
+              </motion.h1>
+            )}
             {isCollapsed && <span className="mx-auto font-bold">EE37</span>}
             <button
               onClick={() => setIsSidebarOpen(false)}
@@ -79,14 +96,30 @@ export function AdminLayoutClient({
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    "mb-1 flex items-center gap-3 rounded-lg px-4 py-3 transition-colors hover:bg-gray-800 hover:text-white",
-                    isActive ? "bg-gray-800 text-white" : "text-gray-300",
+                    "relative mb-1 flex items-center gap-3 rounded-lg px-4 py-3 transition-colors hover:text-white",
+                    isActive
+                      ? "text-white"
+                      : "text-gray-300 hover:bg-gray-800/50",
                     isCollapsed ? "justify-center px-2" : "",
                   )}
                   title={isCollapsed ? item.name : undefined}
                 >
-                  <item.icon size={20} />
-                  {!isCollapsed && <span>{item.name}</span>}
+                  {isActive && (
+                    <motion.div
+                      layoutId="active-nav"
+                      className="absolute inset-0 rounded-lg bg-gray-800"
+                      initial={false}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 30,
+                      }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-3">
+                    <item.icon size={20} />
+                    {!isCollapsed && <span>{item.name}</span>}
+                  </span>
                 </Link>
               );
             })}
@@ -123,7 +156,7 @@ export function AdminLayoutClient({
               )}
             </div>
           </div>
-        </aside>
+        </motion.aside>
 
         {/* Main content */}
         <div className="flex flex-1 flex-col overflow-hidden">
@@ -139,7 +172,17 @@ export function AdminLayoutClient({
           </header>
 
           <main className="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-8">
-            {children}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={pathname}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
       </div>
