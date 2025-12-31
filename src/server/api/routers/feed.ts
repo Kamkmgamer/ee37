@@ -4,7 +4,7 @@ import { eq, desc, and, lt, sql } from "drizzle-orm";
 import {
   createTRPCRouter,
   publicProcedure,
-  protectedProcedure,
+  unmutedProcedure,
 } from "~/server/api/trpc";
 import {
   socialPosts,
@@ -16,7 +16,7 @@ import {
 
 export const feedRouter = createTRPCRouter({
   // Create a new post
-  createPost: protectedProcedure
+  createPost: unmutedProcedure
     .input(
       z.object({
         content: z.string().min(1).max(2000),
@@ -225,7 +225,7 @@ export const feedRouter = createTRPCRouter({
     }),
 
   // Delete a post (only by author)
-  deletePost: protectedProcedure
+  deletePost: unmutedProcedure
     .input(
       z.object({
         postId: z.string().uuid(),
@@ -249,7 +249,7 @@ export const feedRouter = createTRPCRouter({
     }),
 
   // Edit a post (only by author)
-  editPost: protectedProcedure
+  editPost: unmutedProcedure
     .input(
       z.object({
         postId: z.string().uuid(),
