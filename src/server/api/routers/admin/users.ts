@@ -5,11 +5,9 @@ import {
   userProfiles,
   userRestrictions,
   reports,
-  socialPosts,
-  comments,
   adminAuditLog,
 } from "~/server/db/schema";
-import { eq, desc, like, or, and, gte, sql } from "drizzle-orm";
+import { eq, desc, like, or, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 export const adminUsersRouter = createTRPCRouter({
