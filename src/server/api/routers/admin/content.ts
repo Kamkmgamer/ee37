@@ -7,7 +7,7 @@ import {
   users,
   userProfiles,
 } from "~/server/db/schema";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 export const adminContentRouter = createTRPCRouter({
