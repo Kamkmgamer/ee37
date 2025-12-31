@@ -19,7 +19,6 @@ export default async function Page() {
       if (posts.length > 0) {
         userReactions = await api.reactions.getUserReactionsForPosts({
           postIds: posts.map((p) => p.id),
-          userId: session.userId,
         });
       }
     } catch (error) {
