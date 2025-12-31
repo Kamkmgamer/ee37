@@ -17,10 +17,10 @@ export default function AdminAnnouncementsPage() {
     });
 
   const broadcastMutation = api.admin.announcements.broadcast.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       setTitle("");
       setMessage("");
-      refetch();
+      await refetch();
     },
   });
 
@@ -56,7 +56,11 @@ export default function AdminAnnouncementsPage() {
               </label>
               <select
                 value={type}
-                onChange={(e) => setType(e.target.value as any)}
+                onChange={(e) =>
+                  setType(
+                    e.target.value as "announcement" | "alert" | "maintenance",
+                  )
+                }
                 className="w-full rounded-lg border border-gray-200 px-4 py-2 focus:border-[#D4AF37] focus:outline-none"
               >
                 <option value="announcement">General Announcement</option>
@@ -129,7 +133,11 @@ export default function AdminAnnouncementsPage() {
               </p>
             ) : (
               recentAnnouncements.map((announcement) => {
-                const metadata = announcement.metadata as any;
+                const metadata = announcement.metadata as {
+                  title?: string;
+                  message?: string;
+                  recipientCount?: number;
+                };
                 return (
                   <div
                     key={announcement.id}
@@ -145,7 +153,7 @@ export default function AdminAnnouncementsPage() {
                     </div>
                     <p className="text-sm text-gray-600">{metadata?.message}</p>
                     <p className="mt-2 text-xs text-gray-400">
-                      Sent to {metadata?.recipientCount || 0} users
+                      Sent to {metadata?.recipientCount ?? 0} users
                     </p>
                   </div>
                 );
