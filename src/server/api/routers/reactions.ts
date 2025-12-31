@@ -1,9 +1,19 @@
-import { postReactions, commentReactions, notifications, socialPosts, comments } from "~/server/db/schema";
+import {
+  postReactions,
+  commentReactions,
+  notifications,
+  socialPosts,
+  comments,
+} from "~/server/db/schema";
 
 import { z } from "zod";
 import { and, eq, sql } from "drizzle-orm";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  publicProcedure,
+  protectedProcedure,
+} from "~/server/api/trpc";
 
 const reactionTypeSchema = z.enum([
   "like",
@@ -17,20 +27,20 @@ const reactionTypeSchema = z.enum([
 
 export const reactionsRouter = createTRPCRouter({
   // Add or update a reaction to a post
-  addReaction: publicProcedure
+  addReaction: protectedProcedure
     .input(
       z.object({
         postId: z.string().uuid(),
-        userId: z.string().uuid(),
         reactionType: reactionTypeSchema,
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       // Check if reaction already exists
       const existingReaction = await ctx.db.query.postReactions.findFirst({
         where: and(
           eq(postReactions.postId, input.postId),
-          eq(postReactions.userId, input.userId)
+          eq(postReactions.userId, userId),
         ),
       });
 
@@ -39,7 +49,7 @@ export const reactionsRouter = createTRPCRouter({
         .insert(postReactions)
         .values({
           postId: input.postId,
-          userId: input.userId,
+          userId: userId,
           reactionType: input.reactionType,
         })
         .onConflictDoUpdate({
@@ -56,10 +66,10 @@ export const reactionsRouter = createTRPCRouter({
           columns: { authorId: true },
         });
 
-        if (post && post.authorId !== input.userId) {
+        if (post && post.authorId !== userId) {
           await ctx.db.insert(notifications).values({
             recipientId: post.authorId,
-            actorId: input.userId,
+            actorId: userId,
             type: "post_reaction",
             postId: input.postId,
           });
@@ -70,20 +80,20 @@ export const reactionsRouter = createTRPCRouter({
     }),
 
   // Remove a reaction from a post
-  removeReaction: publicProcedure
+  removeReaction: protectedProcedure
     .input(
       z.object({
         postId: z.string().uuid(),
-        userId: z.string().uuid(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       await ctx.db
         .delete(postReactions)
         .where(
           and(
             eq(postReactions.postId, input.postId),
-            eq(postReactions.userId, input.userId),
+            eq(postReactions.userId, userId),
           ),
         );
 
@@ -91,20 +101,20 @@ export const reactionsRouter = createTRPCRouter({
     }),
 
   // Add or update a reaction to a comment
-  addCommentReaction: publicProcedure
+  addCommentReaction: protectedProcedure
     .input(
       z.object({
         commentId: z.string().uuid(),
-        userId: z.string().uuid(),
         reactionType: reactionTypeSchema,
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       // Check if reaction already exists
       const existingReaction = await ctx.db.query.commentReactions.findFirst({
         where: and(
           eq(commentReactions.commentId, input.commentId),
-          eq(commentReactions.userId, input.userId)
+          eq(commentReactions.userId, userId),
         ),
       });
 
@@ -113,7 +123,7 @@ export const reactionsRouter = createTRPCRouter({
         .insert(commentReactions)
         .values({
           commentId: input.commentId,
-          userId: input.userId,
+          userId: userId,
           reactionType: input.reactionType,
         })
         .onConflictDoUpdate({
@@ -130,13 +140,13 @@ export const reactionsRouter = createTRPCRouter({
           columns: { authorId: true, postId: true },
         });
 
-        if (comment && comment.authorId !== input.userId) {
+        if (comment && comment.authorId !== userId) {
           await ctx.db.insert(notifications).values({
             recipientId: comment.authorId,
-            actorId: input.userId,
+            actorId: userId,
             type: "comment_reaction",
             commentId: input.commentId,
-            postId: comment.postId, // Helpful to have context
+            postId: comment.postId,
           });
         }
       }
@@ -145,20 +155,20 @@ export const reactionsRouter = createTRPCRouter({
     }),
 
   // Remove a reaction from a comment
-  removeCommentReaction: publicProcedure
+  removeCommentReaction: protectedProcedure
     .input(
       z.object({
         commentId: z.string().uuid(),
-        userId: z.string().uuid(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       await ctx.db
         .delete(commentReactions)
         .where(
           and(
             eq(commentReactions.commentId, input.commentId),
-            eq(commentReactions.userId, input.userId),
+            eq(commentReactions.userId, userId),
           ),
         );
 
@@ -197,21 +207,21 @@ export const reactionsRouter = createTRPCRouter({
     }),
 
   // Get user's reaction on a specific post
-  getUserReaction: publicProcedure
+  getUserReaction: protectedProcedure
     .input(
       z.object({
         postId: z.string().uuid(),
-        userId: z.string().uuid(),
       }),
     )
     .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       const [reaction] = await ctx.db
         .select({ reactionType: postReactions.reactionType })
         .from(postReactions)
         .where(
           and(
             eq(postReactions.postId, input.postId),
-            eq(postReactions.userId, input.userId),
+            eq(postReactions.userId, userId),
           ),
         )
         .limit(1);
@@ -220,14 +230,14 @@ export const reactionsRouter = createTRPCRouter({
     }),
 
   // Get all user reactions for multiple posts (optimized for feed)
-  getUserReactionsForPosts: publicProcedure
+  getUserReactionsForPosts: protectedProcedure
     .input(
       z.object({
         postIds: z.array(z.string().uuid()),
-        userId: z.string().uuid(),
       }),
     )
     .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       if (input.postIds.length === 0) return {};
 
       const reactions = await ctx.db
@@ -239,7 +249,7 @@ export const reactionsRouter = createTRPCRouter({
         .where(
           and(
             sql`${postReactions.postId} IN ${input.postIds}`,
-            eq(postReactions.userId, input.userId),
+            eq(postReactions.userId, userId),
           ),
         );
 
