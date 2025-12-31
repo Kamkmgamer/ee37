@@ -199,7 +199,7 @@ export default function AdminReportsPage() {
                     <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
                       <div className="flex items-center gap-1">
                         <User size={14} />
-                        <span>{report.reporterName || "Unknown"}</span>
+                        <span>{report.reporterName ?? "Unknown"}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock size={14} />
