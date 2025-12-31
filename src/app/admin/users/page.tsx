@@ -4,7 +4,14 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { Search, User, Shield, Ban, CheckCircle, Clock } from "lucide-react";
+import { Search, User, Ban, CheckCircle, Clock } from "lucide-react";
+import Image from "next/image";
+
+interface Restriction {
+  id: string;
+  expiresAt?: Date | null;
+  type?: string;
+}
 
 export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,17 +23,21 @@ export default function AdminUsersPage() {
   });
 
   const banMutation = api.admin.users.ban.useMutation({
-    onSuccess: () => {
-      refetch();
+    onSuccess: async () => {
+      await refetch();
       setSelectedUser(null);
     },
   });
 
   const unbanMutation = api.admin.users.unban.useMutation({
-    onSuccess: () => refetch(),
+    onSuccess: async () => {
+      await refetch();
+    },
   });
 
-  const getActiveRestriction = (restrictions: any[] | undefined) => {
+  const getActiveRestriction = (
+    restrictions: Array<Restriction> | undefined,
+  ) => {
     if (!restrictions || restrictions.length === 0) return null;
     const now = new Date();
     return restrictions.find((r) => {
@@ -64,7 +75,17 @@ export default function AdminUsersPage() {
           </div>
         ) : (
           usersData.users.map((user) => {
-            const restrictions = (user as any).restrictions;
+            const userWithRestrictions = user as {
+              id: string;
+              name: string;
+              email: string;
+              collegeId: string;
+              isAdmin: boolean;
+              createdAt: Date;
+              avatarUrl: string | null;
+              restrictions?: Array<Restriction> | undefined;
+            };
+            const restrictions = userWithRestrictions.restrictions;
             const hasActiveRestriction = getActiveRestriction(restrictions);
             const isBanned =
               hasActiveRestriction && restrictions?.[0]?.type === "ban";
@@ -78,12 +99,13 @@ export default function AdminUsersPage() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#D4AF37]">
+                    <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#D4AF37]">
                       {user.avatarUrl ? (
-                        <img
+                        <Image
                           src={user.avatarUrl}
                           alt={user.name}
-                          className="h-full w-full rounded-full object-cover"
+                          fill
+                          className="rounded-full object-cover"
                         />
                       ) : (
                         <span className="text-midnight font-bold">
