@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { eq, desc, and, lt, sql } from "drizzle-orm";
 
-import { createTRPCRouter, publicProcedure, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  publicProcedure,
+  protectedProcedure,
+} from "~/server/api/trpc";
 import {
   socialPosts,
   postMedia,
@@ -12,10 +16,9 @@ import {
 
 export const feedRouter = createTRPCRouter({
   // Create a new post
-  createPost: publicProcedure
+  createPost: protectedProcedure
     .input(
       z.object({
-        authorId: z.string().uuid(),
         content: z.string().min(1).max(2000),
         mediaUrls: z
           .array(
@@ -33,7 +36,7 @@ export const feedRouter = createTRPCRouter({
       const [newPost] = await ctx.db
         .insert(socialPosts)
         .values({
-          authorId: input.authorId,
+          authorId: ctx.session.user.id,
           content: input.content,
         })
         .returning();
@@ -66,11 +69,12 @@ export const feedRouter = createTRPCRouter({
 
       // Build conditions
       const conditions = cursor
-        ? lt(socialPosts.createdAt, 
+        ? lt(
+            socialPosts.createdAt,
             ctx.db
               .select({ createdAt: socialPosts.createdAt })
               .from(socialPosts)
-              .where(eq(socialPosts.id, cursor))
+              .where(eq(socialPosts.id, cursor)),
           )
         : undefined;
 
@@ -151,12 +155,13 @@ export const feedRouter = createTRPCRouter({
       const conditions = cursor
         ? and(
             eq(socialPosts.authorId, userId),
-            lt(socialPosts.createdAt,
+            lt(
+              socialPosts.createdAt,
               ctx.db
                 .select({ createdAt: socialPosts.createdAt })
                 .from(socialPosts)
-                .where(eq(socialPosts.id, cursor))
-            )
+                .where(eq(socialPosts.id, cursor)),
+            ),
           )
         : eq(socialPosts.authorId, userId);
 
