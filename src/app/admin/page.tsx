@@ -11,8 +11,6 @@ import {
   ArrowUp,
   Bell,
 } from "lucide-react";
-import { format } from "date-fns";
-import { ar } from "date-fns/locale";
 
 export default function AdminDashboardPage() {
   const { data: stats, isLoading } = api.admin.dashboard.getStats.useQuery();
