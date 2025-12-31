@@ -9,13 +9,9 @@ import {
   Flag,
   Users,
   FileText,
-  MessageSquare,
   GraduationCap,
   History,
   Bell,
-  Settings,
-  LogOut,
-  Menu,
 } from "lucide-react";
 
 const navigation = [
@@ -43,7 +39,7 @@ export default async function AdminLayout({
     where: eq(users.id, session.userId),
   });
 
-  if (!user || !user.isAdmin) {
+  if (!user?.isAdmin) {
     redirect("/feed");
   }
 
