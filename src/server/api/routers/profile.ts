@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  publicProcedure,
+  protectedProcedure,
+} from "~/server/api/trpc";
 import { userProfiles, users } from "~/server/db/schema";
 
 export const profileRouter = createTRPCRouter({
@@ -32,43 +36,41 @@ export const profileRouter = createTRPCRouter({
     }),
 
   // Get current user's profile (requires session in headers)
-  getMyProfile: publicProcedure
-    .input(z.object({ userId: z.string().uuid() }))
-    .query(async ({ ctx, input }) => {
-      const result = await ctx.db
-        .select({
-          userId: users.id,
-          name: users.name,
-          email: users.email,
-          collegeId: users.collegeId,
-          bio: userProfiles.bio,
-          avatarUrl: userProfiles.avatarUrl,
-          coverUrl: userProfiles.coverUrl,
-          location: userProfiles.location,
-          website: userProfiles.website,
-          createdAt: users.createdAt,
-          isAdmin: users.isAdmin,
-        })
-        .from(users)
-        .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
-        .where(eq(users.id, input.userId))
-        .limit(1);
+  getMyProfile: protectedProcedure.query(async ({ ctx }) => {
+    const result = await ctx.db
+      .select({
+        userId: users.id,
+        name: users.name,
+        email: users.email,
+        collegeId: users.collegeId,
+        bio: userProfiles.bio,
+        avatarUrl: userProfiles.avatarUrl,
+        coverUrl: userProfiles.coverUrl,
+        location: userProfiles.location,
+        website: userProfiles.website,
+        createdAt: users.createdAt,
+        isAdmin: users.isAdmin,
+      })
+      .from(users)
+      .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
+      .where(eq(users.id, ctx.session.user.id))
+      .limit(1);
 
-      return result[0] ?? null;
-    }),
+    return result[0] ?? null;
+  }),
 
   // Update profile information
-  updateProfile: publicProcedure
+  updateProfile: protectedProcedure
     .input(
       z.object({
-        userId: z.string().uuid(),
         bio: z.string().max(500).optional(),
         location: z.string().max(256).optional(),
         website: z.string().url().optional().or(z.literal("")),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { userId, ...data } = input;
+      const userId = ctx.session.user.id;
+      const data = input;
 
       // Upsert profile
       await ctx.db
@@ -92,18 +94,18 @@ export const profileRouter = createTRPCRouter({
     }),
 
   // Update avatar URL
-  updateAvatar: publicProcedure
+  updateAvatar: protectedProcedure
     .input(
       z.object({
-        userId: z.string().uuid(),
         avatarUrl: z.string().url(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       await ctx.db
         .insert(userProfiles)
         .values({
-          userId: input.userId,
+          userId,
           avatarUrl: input.avatarUrl,
         })
         .onConflictDoUpdate({
@@ -117,18 +119,18 @@ export const profileRouter = createTRPCRouter({
     }),
 
   // Update cover image URL
-  updateCover: publicProcedure
+  updateCover: protectedProcedure
     .input(
       z.object({
-        userId: z.string().uuid(),
         coverUrl: z.string().url(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       await ctx.db
         .insert(userProfiles)
         .values({
-          userId: input.userId,
+          userId,
           coverUrl: input.coverUrl,
         })
         .onConflictDoUpdate({
