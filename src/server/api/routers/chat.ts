@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { eq, desc, and, or, sql, inArray, lt } from "drizzle-orm";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  unmutedProcedure,
+  protectedProcedure,
+} from "~/server/api/trpc";
 import {
   conversations,
   conversationParticipants,
@@ -113,7 +117,6 @@ export const chatRouter = createTRPCRouter({
       let conversationIds: string[] = [];
       //TODO: implement cursor pagination
       if (cursor) {
-
       }
 
       // Get conversations user is involved in
@@ -330,7 +333,7 @@ export const chatRouter = createTRPCRouter({
     }),
 
   // Send a message
-  sendMessage: protectedProcedure
+  sendMessage: unmutedProcedure
     .input(
       z.object({
         conversationId: z.string().uuid(),
@@ -747,7 +750,7 @@ export const chatRouter = createTRPCRouter({
     }),
 
   // Toggle Reaction
-  react: protectedProcedure
+  react: unmutedProcedure
     .input(
       z.object({
         messageId: z.string().uuid(),
@@ -806,7 +809,7 @@ export const chatRouter = createTRPCRouter({
     }),
 
   // Edit Message
-  editMessage: protectedProcedure
+  editMessage: unmutedProcedure
     .input(
       z.object({
         messageId: z.string().uuid(),
@@ -882,7 +885,7 @@ export const chatRouter = createTRPCRouter({
     }),
 
   // Delete Message for Everyone (only sender can do this)
-  deleteMessageForAll: protectedProcedure
+  deleteMessageForAll: unmutedProcedure
     .input(
       z.object({
         messageId: z.string().uuid(),
