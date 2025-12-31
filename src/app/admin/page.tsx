@@ -7,210 +7,273 @@ import {
   MessageSquare,
   AlertTriangle,
   Ban,
-  TrendingUp,
   ArrowUp,
   Bell,
+  Shield,
+  Search,
 } from "lucide-react";
+import { motion, useSpring, useTransform, type Variants } from "framer-motion";
+import { useEffect } from "react";
+
+function AnimatedNumber({ value }: { value: number }) {
+  const spring = useSpring(0, { stiffness: 40, damping: 20 }); 
+  const display = useTransform(spring, (current) =>
+    Math.floor(current).toLocaleString(),
+  );
+
+  useEffect(() => {
+    spring.set(value);
+  }, [value, spring]);
+
+  return <motion.span>{display}</motion.span>;
+}
 
 export default function AdminDashboardPage() {
   const { data: stats, isLoading } = api.admin.dashboard.getStats.useQuery();
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#D4AF37] border-t-transparent" />
+      <div className="flex h-[60vh] items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="relative flex flex-col items-center gap-4"
+        >
+          <div className="h-16 w-16 animate-spin rounded-full border-2 border-[#D4AF37]/20 border-t-[#D4AF37]" />
+          <p className="animate-pulse text-sm font-medium tracking-widest text-[#D4AF37] uppercase">
+            Accessing Archives...
+          </p>
+        </motion.div>
       </div>
     );
   }
 
   if (!stats) {
     return (
-      <div className="py-12 text-center">
-        <p className="text-gray-500">Failed to load stats</p>
+      <div className="flex h-[50vh] flex-col items-center justify-center space-y-4 text-center">
+        <Shield className="h-16 w-16 text-[#D4AF37]/50" />
+        <p className="text-xl font-medium text-[#0a1628]">System Unreachable</p>
       </div>
     );
   }
 
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.1,
+      },
+    },
+  } as const satisfies Variants;
+
+  const item = {
+    hidden: { opacity: 0, y: 30, filter: "blur(10px)" },
+    show: {
+      opacity: 1,
+      y: 0,
+      filter: "blur(0px)",
+      transition: { type: "spring", stiffness: 40, damping: 15 },
+    },
+  } as const satisfies Variants;
+
   const statCards = [
     {
-      name: "Total Users",
+      label: "Total Users",
       value: stats.totalUsers,
-      change: stats.newUsers7d,
-      changeLabel: "new in 7 days",
+      trend: stats.newUsers7d,
+      trendLabel: "this week",
       icon: Users,
-      color: "bg-blue-500",
     },
     {
-      name: "Total Posts",
+      label: "Total Posts",
       value: stats.totalPosts,
-      change: stats.newPosts24h,
-      changeLabel: "new in 24h",
+      trend: stats.newPosts24h,
+      trendLabel: "today",
       icon: FileText,
-      color: "bg-green-500",
     },
     {
-      name: "Total Comments",
+      label: "Total Comments",
       value: stats.totalComments,
-      change: stats.newComments24h,
-      changeLabel: "new in 24h",
       icon: MessageSquare,
-      color: "bg-purple-500",
-    },
-    {
-      name: "Pending Reports",
-      value: stats.pendingReports,
-      icon: AlertTriangle,
-      color: "bg-red-500",
-      alert: stats.pendingReports > 0,
-    },
-    {
-      name: "Active Bans",
-      value: stats.activeBans,
-      icon: Ban,
-      color: "bg-orange-500",
+      trend: stats.newComments24h,
+      trendLabel: "today",
     },
   ];
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-gray-500">System overview and statistics</p>
-      </div>
+    <motion.div
+      className="space-y-12 p-2 sm:p-6"
+      variants={container}
+      initial="hidden"
+      animate="show"
+    >
+      {/* Header Section */}
+      <motion.div
+        variants={item}
+        className="relative overflow-hidden rounded-3xl bg-[#0a1628] px-8 py-12 text-[#f5ebd7] shadow-2xl"
+      >
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+        <div className="absolute -top-20 -right-20 h-96 w-96 rounded-full bg-[#D4AF37] opacity-10 blur-3xl" />
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {statCards.map((card) => (
-          <div
-            key={card.name}
-            className={`rounded-xl bg-white p-6 shadow-sm transition-shadow hover:shadow-md ${
-              card.alert ? "ring-2 ring-red-500" : ""
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className={`rounded-lg p-3 ${card.color} bg-opacity-10`}>
-                <card.icon
-                  className={`h-6 w-6 ${card.color.replace("bg-", "text-")}`}
-                />
-              </div>
-              {card.change !== undefined && (
-                <div className="flex items-center gap-1 text-sm text-green-600">
-                  <ArrowUp size={16} />
-                  <span>{card.change}</span>
-                </div>
-              )}
-            </div>
-            <div className="mt-4">
-              <p className="text-3xl font-bold text-gray-900">
-                {card.value.toLocaleString()}
+        <div className="relative z-10 flex flex-col justify-between sm:flex-row sm:items-end">
+          <div>
+            <p className="mb-2 font-mono text-xs tracking-[0.2em] text-[#D4AF37] uppercase">
+              Command Center
+            </p>
+            <h1 className="text-4xl font-light tracking-tight sm:text-6xl">
+              Overview
+            </h1>
+          </div>
+          <div className="mt-6 flex items-center gap-4 border-l border-[#D4AF37]/30 pl-6 sm:mt-0">
+            <div>
+              <p className="text-xs tracking-wider text-[#D4AF37] uppercase">
+                System Status
               </p>
-              <p className="text-sm text-gray-500">{card.name}</p>
-              {card.changeLabel && (
-                <p className="mt-1 text-xs text-gray-400">{card.changeLabel}</p>
-              )}
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                </span>
+                <span className="font-mono text-sm">Operational</span>
+              </div>
             </div>
           </div>
+        </div>
+      </motion.div>
+
+      {/* Metrics Grid */}
+      <div className="grid gap-6 md:grid-cols-3">
+        {statCards.map((card) => (
+          <motion.div
+            key={card.label}
+            variants={item}
+            whileHover={{ y: -4, transition: { duration: 0.2 } }}
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-white p-6 shadow-sm transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+          >
+            <div className="absolute top-0 right-0 h-24 w-24 translate-x-8 translate-y-[-10px] opacity-5 transition-transform group-hover:scale-110">
+              <card.icon className="h-full w-full text-[#0a1628]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3 text-[#0a1628]/60">
+                <card.icon size={18} />
+                <span className="font-mono text-xs tracking-wider uppercase">
+                  {card.label}
+                </span>
+              </div>
+              <div className="mt-4 text-4xl font-light text-[#0a1628]">
+                <AnimatedNumber value={card.value} />
+              </div>
+            </div>
+            {card.trend !== undefined && (
+              <div className="mt-4 flex items-center gap-2 text-sm text-emerald-600">
+                <ArrowUp size={14} className="stroke-[3]" />
+                <span className="font-medium">+{card.trend}</span>
+                <span className="ml-1 font-mono text-xs text-[#0a1628]/40 uppercase">
+                  {card.trendLabel}
+                </span>
+              </div>
+            )}
+          </motion.div>
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-xl bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">
-            Quick Actions
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <a
-              href="/admin/reports"
-              className="flex items-center gap-3 rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
-            >
-              <div className="rounded-lg bg-red-100 p-2">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Review Reports</p>
-                <p className="text-sm text-gray-500">
-                  {stats.pendingReports} pending
-                </p>
-              </div>
-            </a>
-            <a
-              href="/admin/announcements"
-              className="flex items-center gap-3 rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
-            >
-              <div className="rounded-lg bg-blue-100 p-2">
-                <Bell className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Broadcast</p>
-                <p className="text-sm text-gray-500">Send announcement</p>
-              </div>
-            </a>
-            <a
-              href="/admin/users"
-              className="flex items-center gap-3 rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
-            >
-              <div className="rounded-lg bg-orange-100 p-2">
-                <Ban className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Manage Users</p>
-                <p className="text-sm text-gray-500">
-                  {stats.activeBans} banned
-                </p>
-              </div>
-            </a>
-            <a
-              href="/admin/audit"
-              className="flex items-center gap-3 rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
-            >
-              <div className="rounded-lg bg-gray-100 p-2">
-                <TrendingUp className="h-5 w-5 text-gray-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">View Audit Log</p>
-                <p className="text-sm text-gray-500">Track all actions</p>
-              </div>
-            </a>
+      {/* Main Content Area */}
+      <div className="flex flex-col gap-8">
+        {/* Quick Actions - Full width */}
+        <motion.div variants={item} className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-light text-[#0a1628]">Directives</h2>
           </div>
-        </div>
 
-        <div className="rounded-xl bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">
-            System Info
-          </h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between border-b py-2">
-              <span className="text-gray-500">Total Users</span>
-              <span className="font-semibold">
-                {stats.totalUsers.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex items-center justify-between border-b py-2">
-              <span className="text-gray-500">New Users (7d)</span>
-              <span className="font-semibold text-green-600">
-                +{stats.newUsers7d}
-              </span>
-            </div>
-            <div className="flex items-center justify-between border-b py-2">
-              <span className="text-gray-500">Total Posts</span>
-              <span className="font-semibold">
-                {stats.totalPosts.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex items-center justify-between border-b py-2">
-              <span className="text-gray-500">New Posts (24h)</span>
-              <span className="font-semibold text-green-600">
-                +{stats.newPosts24h}
-              </span>
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <span className="text-gray-500">Active Bans</span>
-              <span className="font-semibold text-red-600">
-                {stats.activeBans}
-              </span>
-            </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                title: "Reports Inbox",
+                desc: "Review flagged content",
+                stat: `${stats.pendingReports}`,
+                statLabel: "Pending",
+                href: "/admin/reports",
+                icon: AlertTriangle,
+                urgent: stats.pendingReports > 0,
+              },
+              {
+                title: "User Management",
+                desc: "Permissions & Bans",
+                stat: `${stats.activeBans}`,
+                statLabel: "Active Bans",
+                href: "/admin/users",
+                icon: Ban,
+                urgent: false,
+              },
+              {
+                title: "Broadcast",
+                desc: "Sitewide announcements",
+                stat: "New",
+                statLabel: "Compose",
+                href: "/admin/announcements",
+                icon: Bell,
+                urgent: false,
+              },
+              {
+                title: "Audit Log",
+                desc: "System tracing",
+                stat: "View",
+                statLabel: "History",
+                href: "/admin/audit",
+                icon: Search,
+                urgent: false,
+              },
+            ].map((action) => (
+              <motion.a
+                key={action.title}
+                href={action.href}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                className={`group relative overflow-hidden rounded-xl border p-6 transition-all ${
+                  action.urgent
+                    ? "border-red-200 bg-red-50/50 hover:bg-red-50"
+                    : "border-[#D4AF37]/20 bg-white hover:border-[#D4AF37]/50"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div
+                    className={`rounded-lg p-2 ${
+                      action.urgent
+                        ? "bg-red-100 text-red-600"
+                        : "bg-[#0a1628]/5 text-[#0a1628]"
+                    }`}
+                  >
+                    <action.icon size={20} strokeWidth={2} />
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className={`text-2xl font-light ${
+                        action.urgent ? "text-red-600" : "text-[#0a1628]"
+                      }`}
+                    >
+                      {action.stat}
+                    </p>
+                    <p className="font-mono text-[10px] tracking-wider text-[#0a1628]/40 uppercase">
+                      {action.statLabel}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h3 className="font-medium text-[#0a1628]">{action.title}</h3>
+                  <p className="text-sm text-[#0a1628]/60 group-hover:text-[#0a1628]/80">
+                    {action.desc}
+                  </p>
+                </div>
+                {!action.urgent && (
+                  <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#D4AF37] transition-all duration-300 group-hover:w-full" />
+                )}
+              </motion.a>
+            ))}
           </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
