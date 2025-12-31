@@ -4,7 +4,6 @@ import {
   reports,
   adminAuditLog,
   users,
-  userProfiles,
   socialPosts,
   comments,
 } from "~/server/db/schema";
