@@ -4,14 +4,7 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import {
-  Eye,
-  EyeOff,
-  Trash2,
-  FileText,
-  MessageSquare,
-  Filter,
-} from "lucide-react";
+import { Eye, EyeOff, Trash2, FileText, MessageSquare } from "lucide-react";
 
 export default function AdminContentPage() {
   const [activeTab, setActiveTab] = useState<"posts" | "comments">("posts");
@@ -52,8 +45,6 @@ export default function AdminContentPage() {
   const deleteCommentMutation = api.admin.content.deleteComment.useMutation({
     onSuccess: () => refetchComments(),
   });
-
-  const refetch = activeTab === "posts" ? refetchPosts : refetchComments;
 
   return (
     <div className="space-y-6">
