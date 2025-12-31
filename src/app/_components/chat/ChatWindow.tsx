@@ -16,6 +16,9 @@ interface ChatWindowProps {
   currentUserId: string;
 }
 
+// Global map to track which conversations have been marked as read
+const readConversations = new Set<string>();
+
 export function ChatWindow({ currentUserId }: ChatWindowProps) {
   const searchParams = useSearchParams();
   const conversationId = searchParams.get("c");
@@ -41,6 +44,8 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
 
   const utils = api.useUtils();
 
+  const markAsReadMutation = api.chat.markAsRead.useMutation();
+
   // Fetch Conversation Details
   const { data: conversation, isLoading: isConvLoading } =
     api.chat.getConversation.useQuery(
@@ -48,13 +53,12 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
       { enabled: !!conversationId },
     );
 
-  // Fetch Messages with Polling
+  // Fetch Messages
   const { data: messagesData, isLoading: isMessagesLoading } =
     api.chat.getMessages.useQuery(
       { conversationId: conversationId! },
       {
         enabled: !!conversationId,
-        refetchInterval: 3000,
       },
     );
 
@@ -119,12 +123,6 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
         );
       }
     },
-    onSettled: () => {
-      void utils.chat.getMessages.invalidate({
-        conversationId: conversationId!,
-      });
-      void utils.chat.getConversations.invalidate();
-    },
   });
 
   const editMessageMutation = api.chat.editMessage.useMutation({
@@ -136,18 +134,14 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
     },
   });
 
-  // Optimistic reaction mutation
   const reactMutation = api.chat.react.useMutation({
     onMutate: async ({ messageId, type }) => {
-      // Cancel any outgoing refetches
       await utils.chat.getMessages.cancel({ conversationId: conversationId! });
 
-      // Snapshot previous value
       const previousMessages = utils.chat.getMessages.getData({
         conversationId: conversationId!,
       });
 
-      // Optimistically update
       utils.chat.getMessages.setData(
         { conversationId: conversationId! },
         (old) => {
@@ -164,12 +158,10 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
               let newReactions: MessageReaction[];
               if (existingReaction) {
                 if (existingReaction.reactionType === type) {
-                  // Remove reaction
                   newReactions = msg.reactions.filter(
                     (r) => r.userId !== currentUserId,
                   );
                 } else {
-                  // Update reaction
                   newReactions = msg.reactions.map((r) =>
                     r.userId === currentUserId
                       ? {
@@ -180,7 +172,6 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
                   ) as MessageReaction[];
                 }
               } else {
-                // Add new reaction
                 newReactions = [
                   ...msg.reactions,
                   {
@@ -202,7 +193,6 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
       return { previousMessages };
     },
     onError: (_err, _variables, context) => {
-      // Rollback on error
       if (context?.previousMessages) {
         utils.chat.getMessages.setData(
           { conversationId: conversationId! },
@@ -217,7 +207,6 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
     },
   });
 
-  // Optimistic delete for me mutation
   const deleteForMeMutation = api.chat.deleteMessageForMe.useMutation({
     onMutate: async ({ messageId }) => {
       await utils.chat.getMessages.cancel({ conversationId: conversationId! });
@@ -226,7 +215,6 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
         conversationId: conversationId!,
       });
 
-      // Optimistically remove the message from the list
       utils.chat.getMessages.setData(
         { conversationId: conversationId! },
         (old) => {
@@ -255,7 +243,6 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
     },
   });
 
-  // Optimistic delete for all mutation
   const deleteForAllMutation = api.chat.deleteMessageForAll.useMutation({
     onMutate: async ({ messageId }) => {
       await utils.chat.getMessages.cancel({ conversationId: conversationId! });
@@ -264,7 +251,6 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
         conversationId: conversationId!,
       });
 
-      // Optimistically remove the message from the list
       utils.chat.getMessages.setData(
         { conversationId: conversationId! },
         (old) => {
@@ -292,18 +278,6 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
       });
     },
   });
-
-  const markAsReadMutation = api.chat.markAsRead.useMutation({
-    onSuccess: () => {
-      void utils.chat.getConversations.invalidate();
-    },
-  });
-
-  useEffect(() => {
-    if (conversationId && messagesData?.messages.length) {
-      markAsReadMutation.mutate({ conversationId });
-    }
-  }, [conversationId, messagesData?.messages.length]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
