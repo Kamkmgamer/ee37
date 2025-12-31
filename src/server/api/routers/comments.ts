@@ -1,17 +1,20 @@
-
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  unmutedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import { comments, notifications, socialPosts } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 
 export const commentsRouter = createTRPCRouter({
-  create: protectedProcedure
+  create: unmutedProcedure
     .input(
       z.object({
         postId: z.string().uuid(),
         content: z.string().min(1),
         parentId: z.string().uuid().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const [newComment] = await ctx.db
@@ -26,13 +29,16 @@ export const commentsRouter = createTRPCRouter({
 
       // Notifications Logic
       const post = await ctx.db.query.socialPosts.findFirst({
-        where: eq(socialPosts.id, input.postId), 
+        where: eq(socialPosts.id, input.postId),
         columns: { authorId: true },
       });
 
-      if (!post) return; 
+      if (!post) return;
 
-      const notificationsMap = new Map<string, "new_comment" | "comment_reply">();
+      const notificationsMap = new Map<
+        string,
+        "new_comment" | "comment_reply"
+      >();
 
       // 1. Potential notification for post author
       if (post.authorId !== ctx.session.user.id) {
@@ -61,7 +67,7 @@ export const commentsRouter = createTRPCRouter({
             postId: input.postId,
             commentId: newComment?.id,
           });
-        }
+        },
       );
 
       await Promise.all(notificationPromises);
@@ -75,8 +81,8 @@ export const commentsRouter = createTRPCRouter({
         with: {
           author: {
             with: {
-                profile: true,
-            }
+              profile: true,
+            },
           },
           reactions: true,
         },
@@ -85,19 +91,22 @@ export const commentsRouter = createTRPCRouter({
       return allComments;
     }),
 
-  edit: protectedProcedure
+  edit: unmutedProcedure
     .input(
       z.object({
         commentId: z.string().uuid(),
         content: z.string().min(1),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const existingComment = await ctx.db.query.comments.findFirst({
         where: eq(comments.id, input.commentId),
       });
 
-      if (!existingComment || existingComment.authorId !== ctx.session.user.id) {
+      if (
+        !existingComment ||
+        existingComment.authorId !== ctx.session.user.id
+      ) {
         throw new Error("Unauthorized");
       }
 
@@ -107,14 +116,17 @@ export const commentsRouter = createTRPCRouter({
         .where(eq(comments.id, input.commentId));
     }),
 
-  delete: protectedProcedure
+  delete: unmutedProcedure
     .input(z.object({ commentId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       const existingComment = await ctx.db.query.comments.findFirst({
         where: eq(comments.id, input.commentId),
       });
 
-      if (!existingComment || existingComment.authorId !== ctx.session.user.id) {
+      if (
+        !existingComment ||
+        existingComment.authorId !== ctx.session.user.id
+      ) {
         throw new Error("Unauthorized");
       }
 
