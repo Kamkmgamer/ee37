@@ -24,9 +24,17 @@ export async function decrypt(session: string | undefined = "") {
   }
 }
 
-export async function createSession(payload: { userId: string; email: string; name: string }) {
+export async function createSession(payload: {
+  userId: string;
+  email: string;
+  name: string;
+}) {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  const session = await encrypt(payload);
+  const session = await encrypt({
+    userId: payload.userId,
+    email: payload.email,
+    name: payload.name,
+  });
   const cookieStore = await cookies();
 
   cookieStore.set("session", session, {
@@ -38,7 +46,16 @@ export async function createSession(payload: { userId: string; email: string; na
   });
 }
 
-export async function verifySession() {
+export type SessionData = {
+  userId: string;
+  email: string;
+  name: string;
+  isBanned: boolean;
+  isMuted: boolean;
+  isAdmin: boolean;
+};
+
+export async function verifySession(): Promise<SessionData | null> {
   const cookieStore = await cookies();
   const session = cookieStore.get("session")?.value;
   const sessionPayload = await decrypt(session);
@@ -47,7 +64,7 @@ export async function verifySession() {
     return null;
   }
 
-  return sessionPayload as { userId: string; email: string; name: string };
+  return sessionPayload as unknown as SessionData;
 }
 
 export async function deleteSession() {
