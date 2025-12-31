@@ -1,7 +1,6 @@
 import "~/styles/globals.css";
 
 import { type Metadata, type Viewport } from "next";
-import { IBM_Plex_Sans_Arabic, Noto_Kufi_Arabic } from "next/font/google";
 
 import { ToastProvider } from "./_components/ui/Toast";
 import { TRPCReactProvider } from "~/trpc/react";
@@ -31,18 +30,6 @@ export const metadata: Metadata = {
   },
 };
 
-const notoKufi = Noto_Kufi_Arabic({
-  subsets: ["arabic"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  variable: "--font-noto-kufi",
-});
-
-const ibmPlexArabic = IBM_Plex_Sans_Arabic({
-  subsets: ["arabic"],
-  weight: ["100", "200", "300", "400", "500", "600", "700"],
-  variable: "--font-ibm-plex",
-});
-
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -51,7 +38,6 @@ export default async function RootLayout({
     <html
       lang="ar"
       dir="rtl"
-      className={`${notoKufi.variable} ${ibmPlexArabic.variable}`}
     >
       <body className="font-sans antialiased" suppressHydrationWarning>
         <TRPCReactProvider>
