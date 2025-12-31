@@ -10,7 +10,9 @@ interface ChatWidgetWrapperProps {
 export function ChatWidgetWrapper({ userId }: ChatWidgetWrapperProps) {
   const pathname = usePathname();
   const isChatPage =
-    pathname?.startsWith("/chat") || pathname?.startsWith("/admin");
+    pathname?.startsWith("/chat") ||
+    pathname?.startsWith("/admin") ||
+    pathname?.startsWith("/survey");
 
   if (isChatPage) {
     return null;
