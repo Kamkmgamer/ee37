@@ -14,6 +14,7 @@ import { chatRouter } from "~/server/api/routers/chat";
 import { learningRouter } from "~/server/api/routers/learning";
 import { notificationsRouter } from "~/server/api/routers/notifications";
 import { reportsRouter } from "~/server/api/routers/reports";
+import { adminRouter } from "~/server/api/routers/admin";
 
 /**
  * This is the primary router for your server.
@@ -30,6 +31,7 @@ export const appRouter = createTRPCRouter({
   learning: learningRouter,
   notifications: notificationsRouter,
   reports: reportsRouter,
+  admin: adminRouter,
 });
 
 // export type definition of API
