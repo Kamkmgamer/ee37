@@ -13,7 +13,6 @@ import {
   Video,
   Link as LinkIcon,
   File,
-  Search,
 } from "lucide-react";
 
 export default function AdminLearningPage() {
@@ -37,10 +36,6 @@ export default function AdminLearningPage() {
   });
 
   const rejectMutation = api.admin.learning.rejectMaterial.useMutation({
-    onSuccess: () => refetchMaterials(),
-  });
-
-  const deleteMutation = api.admin.learning.deleteMaterial.useMutation({
     onSuccess: () => refetchMaterials(),
   });
 
@@ -158,7 +153,7 @@ export default function AdminLearningPage() {
                         </div>
                         <p className="mt-1 text-sm text-gray-500">
                           {material.subjectName} • By{" "}
-                          {material.uploaderName || "Unknown"}
+                          {material.uploaderName ?? "Unknown"}
                         </p>
                         {material.description && (
                           <p className="mt-2 text-sm text-gray-600">
@@ -249,9 +244,9 @@ export default function AdminLearningPage() {
             onClick={() => {
               const name = prompt("Subject name:");
               const code = prompt("Subject code:");
-              const semester = parseInt(prompt("Semester (1-10):") || "1");
+              const semester = parseInt(prompt("Semester (1-10):") ?? "1");
               const accentColor =
-                prompt("Accent color (hex):", "#D4AF37") || "#D4AF37";
+                prompt("Accent color (hex):", "#D4AF37") ?? "#D4AF37";
               if (name && code) {
                 createSubjectMutation.mutate({
                   name,
