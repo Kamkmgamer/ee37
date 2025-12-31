@@ -8,7 +8,7 @@ import { api } from "~/trpc/react";
 interface ReactionBarProps {
   targetId: string;
   type: "post" | "comment";
-  userId: string;
+  _userId: string;
   initialReactions: Record<string, number>;
   userReaction?: string | null;
 }
@@ -16,7 +16,7 @@ interface ReactionBarProps {
 export function ReactionBar({
   targetId,
   type,
-  userId,
+  _userId,
   initialReactions,
   userReaction: initialUserReaction,
 }: ReactionBarProps) {
@@ -68,11 +68,10 @@ export function ReactionBar({
         setUserReaction(null);
 
         if (type === "post") {
-          await removePostReaction.mutateAsync({ postId: targetId, userId });
+          await removePostReaction.mutateAsync({ postId: targetId });
         } else {
           await removeCommentReaction.mutateAsync({
             commentId: targetId,
-            userId,
           });
         }
       } else {
@@ -92,13 +91,11 @@ export function ReactionBar({
         if (type === "post") {
           await addPostReaction.mutateAsync({
             postId: targetId,
-            userId,
             reactionType,
           });
         } else {
           await addCommentReaction.mutateAsync({
             commentId: targetId,
-            userId,
             reactionType,
           });
         }
@@ -107,7 +104,6 @@ export function ReactionBar({
     [
       userReaction,
       targetId,
-      userId,
       type,
       addPostReaction,
       removePostReaction,

@@ -261,7 +261,7 @@ export function CommentItem({
             <ReactionBar
               targetId={comment.id}
               type="comment"
-              userId={currentUserId}
+              _userId={currentUserId}
               initialReactions={reactionsObj}
               userReaction={userReaction}
             />

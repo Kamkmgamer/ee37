@@ -364,7 +364,7 @@ export function PostCard({
         <ReactionBar
           targetId={post.id}
           type="post"
-          userId={currentUserId}
+          _userId={currentUserId}
           initialReactions={reactionsObj}
           userReaction={userReaction}
         />

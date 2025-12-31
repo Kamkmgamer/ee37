@@ -13,14 +13,14 @@ interface MediaItem {
 }
 
 interface CreatePostFormProps {
-  userId: string;
+  _userId: string;
   userAvatar?: string | null;
   userName: string;
   onPostCreated?: () => void;
 }
 
 export function CreatePostForm({
-  userId,
+  _userId,
   userAvatar,
   userName,
   onPostCreated,
@@ -65,7 +65,6 @@ export function CreatePostForm({
     if (!content.trim() && media.length === 0) return;
 
     await createPost.mutateAsync({
-      authorId: userId,
       content: content.trim(),
       mediaUrls: media.length > 0 ? media : undefined,
     });
