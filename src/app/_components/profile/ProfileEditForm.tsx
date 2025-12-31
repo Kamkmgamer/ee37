@@ -10,7 +10,7 @@ import type { OurFileRouter } from "~/server/uploadthing/core";
 import { api } from "~/trpc/react";
 
 interface ProfileEditFormProps {
-  userId: string;
+  _userId: string;
   initialData: {
     name: string;
     bio: string | null;
@@ -23,7 +23,7 @@ interface ProfileEditFormProps {
 }
 
 export function ProfileEditForm({
-  userId,
+  _userId,
   initialData,
   onSave,
 }: ProfileEditFormProps) {
@@ -42,7 +42,6 @@ export function ProfileEditForm({
 
   const handleSave = async () => {
     await updateProfile.mutateAsync({
-      userId,
       bio: bio || undefined,
       location: location || undefined,
       website: website || "",
@@ -73,7 +72,7 @@ export function ProfileEditForm({
                 if (res?.[0]) {
                   const url = res[0].ufsUrl;
                   setCoverUrl(url);
-                  await updateCover.mutateAsync({ userId, coverUrl: url });
+                  await updateCover.mutateAsync({ coverUrl: url });
                 }
               }}
               onUploadError={() => setIsUploadingCover(false)}
@@ -124,7 +123,7 @@ export function ProfileEditForm({
                   if (res?.[0]) {
                     const url = res[0].ufsUrl;
                     setAvatarUrl(url);
-                    await updateAvatar.mutateAsync({ userId, avatarUrl: url });
+                    await updateAvatar.mutateAsync({ avatarUrl: url });
                   }
                 }}
                 onUploadError={() => setIsUploadingAvatar(false)}
