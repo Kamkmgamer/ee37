@@ -51,7 +51,7 @@ export default async function EditProfilePage() {
       <main className="mx-auto max-w-2xl px-4 py-6">
         <div className="elegant-card rounded-2xl p-6">
           <ProfileEditForm
-            userId={session.userId}
+            _userId={session.userId}
             initialData={{
               name: session.name,
               bio: profile?.bio ?? null,

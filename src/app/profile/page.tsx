@@ -28,7 +28,6 @@ export default async function ProfilePage() {
     posts.length > 0
       ? await api.reactions.getUserReactionsForPosts({
           postIds: posts.map((p) => p.id),
-          userId: session.userId,
         })
       : {};
 
