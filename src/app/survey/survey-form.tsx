@@ -11,6 +11,7 @@ import {
   Camera,
   Upload,
   Zap,
+  Ghost,
 } from "lucide-react";
 import { useUploadThing } from "~/lib/uploadthing";
 
@@ -27,9 +28,11 @@ export default function SurveyForm({ user }: SurveyFormProps) {
     name: user?.name ?? "",
     word: "",
   });
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [isLateSubmission, setIsLateSubmission] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -95,6 +98,7 @@ export default function SurveyForm({ user }: SurveyFormProps) {
           name: formData.name,
           word: formData.word,
           imageUrl,
+          isAnonymous,
         }),
       });
 
@@ -102,6 +106,8 @@ export default function SurveyForm({ user }: SurveyFormProps) {
         throw new Error("فشل في إرسال المشاركة");
       }
 
+      const data = (await response.json()) as { isLate?: boolean };
+      setIsLateSubmission(data.isLate ?? false);
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "حدث خطأ غير متوقع");
@@ -321,6 +327,40 @@ export default function SurveyForm({ user }: SurveyFormProps) {
                     </div>
                   </div>
 
+                  {/* Anonymous Toggle */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.45 }}
+                    className="flex items-center justify-end gap-3"
+                  >
+                    <label className="cursor-pointer text-sm font-medium text-[var(--color-midnight)]/60">
+                      إخفاء اسمي
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAnonymous(!isAnonymous)}
+                      disabled={isLoading}
+                      className={`relative h-8 w-14 rounded-full transition-colors duration-300 ${
+                        isAnonymous
+                          ? "bg-[var(--color-gold)]"
+                          : "bg-[var(--color-midnight)]/10"
+                      }`}
+                    >
+                      <motion.div
+                        animate={{
+                          x: isAnonymous ? 28 : 4,
+                        }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 500,
+                          damping: 30,
+                        }}
+                        className="absolute top-1 left-0 h-6 w-6 rounded-full bg-white shadow-lg"
+                      />
+                    </button>
+                  </motion.div>
+
                   {/* Word Input */}
                   <div className="space-y-2">
                     <label className="mr-1 text-sm font-bold text-[var(--color-midnight)]/70">
@@ -402,16 +442,39 @@ export default function SurveyForm({ user }: SurveyFormProps) {
                   className="text-4xl font-black text-[var(--color-midnight)]"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
-                  تم الحفظ!
+                  {isLateSubmission ? "تم التسجيل متأخراً!" : "تم الحفظ!"}
                 </h2>
                 <p className="mx-auto max-w-xs text-lg text-[var(--color-midnight)]/60">
-                  شكراً لك{" "}
-                  <span className="font-bold text-[var(--color-gold)]">
-                    {formData.name}
-                  </span>
-                  <br />
-                  ذكرياتك محفوظة للأبد
+                  {isAnonymous ? (
+                    <>
+                      شكراً لك،{" "}
+                      <span className="font-bold text-[var(--color-gold)]">
+                        مجهول
+                      </span>
+                      <br />
+                      ذكرياتك محفوظة للأبد
+                    </>
+                  ) : (
+                    <>
+                      شكراً لك{" "}
+                      <span className="font-bold text-[var(--color-gold)]">
+                        {formData.name}
+                      </span>
+                      <br />
+                      ذكرياتك محفوظة للأبد
+                    </>
+                  )}
                 </p>
+                {isLateSubmission && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-700"
+                  >
+                    <Ghost size={16} />
+                    <span>تسجيل متأخر - يظهر اسمك فقط للإدارة</span>
+                  </motion.div>
+                )}
               </div>
 
               {imagePreview && (
@@ -443,8 +506,10 @@ export default function SurveyForm({ user }: SurveyFormProps) {
                 <button
                   onClick={() => {
                     setSubmitted(false);
+                    setIsLateSubmission(false);
                     // Don't reset name if it's from user
                     setFormData({ name: user?.name ?? "", word: "" });
+                    setIsAnonymous(false);
                     setImageFile(null);
                     setImagePreview(null);
                   }}

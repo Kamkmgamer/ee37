@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Plus, X, User, Quote, Zap, ArrowRight } from "lucide-react";
+import { Plus, X, User, Quote, EyeOff } from "lucide-react";
 import { PageHeader } from "../_components/PageHeader";
 
 interface Submission {
@@ -12,6 +12,7 @@ interface Submission {
   imageUrl: string | null;
   createdAt: string;
   userId: string | null;
+  isAnonymous: boolean;
 }
 
 // Generate organic transforms for each card
@@ -253,9 +254,25 @@ export default function GalleryPage() {
                             <Quote size={12} />
                             {submission.word}
                           </div>
-                          <p className="truncate text-lg font-bold text-[var(--color-sand)]">
-                            {submission.name}
-                          </p>
+                          {submission.isAnonymous ? (
+                            <div className="flex items-center gap-2 text-lg font-bold text-[var(--color-sand)]">
+                              <EyeOff
+                                size={18}
+                                className="text-[var(--color-sand)]/70"
+                              />
+                              <span>مجهول</span>
+                            </div>
+                          ) : submission.userId ? (
+                            <Link href={`/profile/${submission.userId}`}>
+                              <p className="truncate text-lg font-bold text-[var(--color-sand)] transition-colors hover:text-[var(--color-gold)]">
+                                {submission.name}
+                              </p>
+                            </Link>
+                          ) : (
+                            <p className="truncate text-lg font-bold text-[var(--color-sand)]">
+                              {submission.name}
+                            </p>
+                          )}
                         </motion.div>
                       </div>
                     </div>
@@ -342,7 +359,15 @@ export default function GalleryPage() {
                       {selectedCard.word}
                     </span>
                   </div>
-                  {selectedCard.userId ? (
+                  {selectedCard.isAnonymous ? (
+                    <div className="flex items-center justify-center gap-2 text-2xl font-bold text-[var(--color-midnight)]">
+                      <EyeOff
+                        size={24}
+                        className="text-[var(--color-midnight)]/50"
+                      />
+                      <span>مجهول</span>
+                    </div>
+                  ) : selectedCard.userId ? (
                     <Link href={`/profile/${selectedCard.userId}`}>
                       <h3
                         className="mb-2 cursor-pointer text-2xl font-bold text-[var(--color-midnight)] transition-colors hover:text-[var(--color-gold)]"

@@ -15,6 +15,7 @@ export async function GET() {
         imageUrl: submissions.imageUrl,
         createdAt: submissions.createdAt,
         userId: submissions.userId,
+        isAnonymous: submissions.isAnonymous,
       })
       .from(submissions)
       .orderBy(desc(submissions.createdAt));
@@ -24,7 +25,7 @@ export async function GET() {
     console.error("Failed to fetch submissions:", error);
     return NextResponse.json(
       { error: "فشل في جلب المشاركات" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
