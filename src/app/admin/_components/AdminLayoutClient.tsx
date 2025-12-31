@@ -15,6 +15,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -135,6 +136,20 @@ export function AdminLayoutClient({
               <ChevronRight size={20} />
             )}
           </button>
+
+          <nav className="px-3">
+            <Link
+              href="/feed"
+              className={cn(
+                "mb-1 flex items-center gap-3 rounded-lg px-4 py-3 text-red-400 transition-colors hover:bg-red-900/20 hover:text-red-300",
+                isCollapsed ? "justify-center px-2" : "",
+              )}
+              title={isCollapsed ? "Exit Admin" : undefined}
+            >
+              <LogOut size={20} />
+              {!isCollapsed && <span>Exit Admin</span>}
+            </Link>
+          </nav>
 
           <div
             className={cn(
