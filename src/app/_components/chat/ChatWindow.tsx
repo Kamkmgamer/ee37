@@ -16,9 +16,6 @@ interface ChatWindowProps {
   currentUserId: string;
 }
 
-// Global map to track which conversations have been marked as read
-const readConversations = new Set<string>();
-
 export function ChatWindow({ currentUserId }: ChatWindowProps) {
   const searchParams = useSearchParams();
   const conversationId = searchParams.get("c");
@@ -43,8 +40,6 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 
   const utils = api.useUtils();
-
-  const markAsReadMutation = api.chat.markAsRead.useMutation();
 
   // Fetch Conversation Details
   const { data: conversation, isLoading: isConvLoading } =
