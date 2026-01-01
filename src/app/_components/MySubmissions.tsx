@@ -13,7 +13,9 @@ import {
   Maximize2,
   Minimize2,
   Calendar,
+  Check,
 } from "lucide-react";
+import { useToast } from "../ui/Toast";
 
 interface Submission {
   id: string;
@@ -71,6 +73,8 @@ export default function MySubmissions({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editWord, setEditWord] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     void fetchSubmissions();
@@ -88,9 +92,12 @@ export default function MySubmissions({
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("هل أنت متأكد من حذف هذه الصورة؟")) return;
+  const confirmDelete = (id: string) => {
+    setConfirmDeleteId(id);
+  };
 
+  const handleDelete = async (id: string) => {
+    setConfirmDeleteId(null);
     setDeletingId(id);
     try {
       const response = await fetch(`/api/submissions/manage?id=${id}`, {
@@ -99,12 +106,19 @@ export default function MySubmissions({
 
       if (response.ok) {
         setSubmissions((prev) => prev.filter((s) => s.id !== id));
+        toast.success("تم حذف الصورة بنجاح");
+      } else {
+        toast.error("فشل في حذف الصورة");
       }
-    } catch (error) {
-      console.error("Failed to delete submission:", error);
+    } catch {
+      toast.error("حدث خطأ أثناء الحذف");
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setConfirmDeleteId(null);
   };
 
   const startEditing = (submission: Submission) => {
@@ -125,9 +139,12 @@ export default function MySubmissions({
           prev.map((s) => (s.id === id ? { ...s, word: editWord || null } : s)),
         );
         setEditingId(null);
+        toast.success("تم تحديث الكلمة بنجاح");
+      } else {
+        toast.error("فشل في تحديث الكلمة");
       }
-    } catch (error) {
-      console.error("Failed to update word:", error);
+    } catch {
+      toast.error("حدث خطأ أثناء التحديث");
     }
   };
 
@@ -213,7 +230,7 @@ export default function MySubmissions({
                 />
               )}
 
-              {isOwnProfile && (
+              {isOwnProfile && confirmDeleteId !== submission.id && (
                 <div className="absolute right-0 bottom-0 left-0 flex justify-center gap-1 bg-gradient-to-t from-[var(--color-midnight)]/80 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
                   <button
                     onClick={() => startEditing(submission)}
@@ -223,7 +240,7 @@ export default function MySubmissions({
                     <Edit2 size={14} />
                   </button>
                   <button
-                    onClick={() => handleDelete(submission.id)}
+                    onClick={() => confirmDelete(submission.id)}
                     disabled={deletingId === submission.id}
                     className="rounded-full bg-red-500/80 p-2 text-white hover:bg-red-500 disabled:opacity-50"
                     title="حذف"
@@ -234,6 +251,31 @@ export default function MySubmissions({
                       <Trash2 size={14} />
                     )}
                   </button>
+                </div>
+              )}
+
+              {isOwnProfile && confirmDeleteId === submission.id && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl bg-[var(--color-midnight)]/90 p-2">
+                  <p className="text-sm font-medium text-white">تأكيد الحذف؟</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleDelete(submission.id)}
+                      disabled={deletingId === submission.id}
+                      className="rounded-full bg-red-500 p-2 text-white hover:bg-red-600 disabled:opacity-50"
+                    >
+                      {deletingId === submission.id ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        <Check size={14} />
+                      )}
+                    </button>
+                    <button
+                      onClick={cancelDelete}
+                      className="rounded-full bg-white/20 p-2 text-white hover:bg-white/30"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
                 </div>
               )}
 
