@@ -138,7 +138,7 @@ export default function SurveyForm({ user }: SurveyFormProps) {
       const imagesData = uploadResult.map((result, index) => ({
         imageUrl: result.ufsUrl,
         imageName: images[index]?.file.name ?? "image",
-        word: useCommonWord ? commonWord : images[index]?.word || null,
+        word: useCommonWord ? commonWord : (images[index]?.word ?? null),
       }));
 
       const response = await fetch("/api/upload", {
