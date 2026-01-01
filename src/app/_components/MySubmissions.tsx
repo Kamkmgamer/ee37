@@ -15,7 +15,7 @@ import {
   Calendar,
   Check,
 } from "lucide-react";
-import { useToast } from "../ui/Toast";
+import { useToast } from "~/app/_components/ui/Toast";
 
 interface Submission {
   id: string;
@@ -74,7 +74,7 @@ export default function MySubmissions({
   const [editWord, setEditWord] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const { toast } = useToast();
+  const { success: toastSuccess, error: toastError } = useToast();
 
   useEffect(() => {
     void fetchSubmissions();
@@ -106,12 +106,12 @@ export default function MySubmissions({
 
       if (response.ok) {
         setSubmissions((prev) => prev.filter((s) => s.id !== id));
-        toast.success("تم حذف الصورة بنجاح");
+        toastSuccess("تم حذف الصورة بنجاح");
       } else {
-        toast.error("فشل في حذف الصورة");
+        toastError("فشل في حذف الصورة");
       }
     } catch {
-      toast.error("حدث خطأ أثناء الحذف");
+      toastError("حدث خطأ أثناء الحذف");
     } finally {
       setDeletingId(null);
     }
@@ -139,12 +139,12 @@ export default function MySubmissions({
           prev.map((s) => (s.id === id ? { ...s, word: editWord || null } : s)),
         );
         setEditingId(null);
-        toast.success("تم تحديث الكلمة بنجاح");
+        toastSuccess("تم تحديث الكلمة بنجاح");
       } else {
-        toast.error("فشل في تحديث الكلمة");
+        toastError("فشل في تحديث الكلمة");
       }
     } catch {
-      toast.error("حدث خطأ أثناء التحديث");
+      toastError("حدث خطأ أثناء التحديث");
     }
   };
 
