@@ -14,6 +14,7 @@ interface PageHeaderProps {
   activeNav?: "feed" | "profile" | "learning" | "gallery" | "people" | "chat";
   isAdmin?: boolean;
   rightAction?: React.ReactNode;
+  leftAction?: React.ReactNode;
 }
 
 export function PageHeader({
@@ -24,11 +25,13 @@ export function PageHeader({
   activeNav,
   isAdmin = false,
   rightAction,
+  leftAction,
 }: PageHeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--color-midnight)]/10 bg-[var(--color-paper)]/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
         <div className="flex items-center gap-3">
+          {leftAction && <div className="mr-2">{leftAction}</div>}
           {showBack && (
             <Link
               href={backHref}

@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { submissions } from "~/server/db/schema";
-
 import { verifySession } from "~/lib/session";
+import { randomUUID } from "crypto";
 
 const SUBMISSION_DEADLINE = new Date("2025-12-31T23:59:59");
 
@@ -13,38 +13,52 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json()) as {
       name: string;
-      word: string;
-      imageUrl?: string;
+      images: Array<{
+        imageUrl: string;
+        imageName: string;
+        word?: string;
+      }>;
+      semester?: number;
       isAnonymous?: boolean;
     };
 
-    const { name, word, imageUrl, isAnonymous = false } = body;
+    const { name, images, semester, isAnonymous = false } = body;
 
-    if (!name || !word) {
+    if (!name || !images || images.length === 0) {
       return NextResponse.json(
-        { error: "الاسم والكلمة مطلوبان" },
+        { error: "الاسم وصور واحدة على الأقل مطلوبان" },
         { status: 400 },
       );
     }
 
     const isLateSubmission = new Date() > SUBMISSION_DEADLINE;
+    const batchId = randomUUID();
 
-    // Save to database
-    const [submission] = await db
+    const submissionData = images.map((img) => ({
+      name,
+      word: img.word ?? null,
+      imageUrl: img.imageUrl,
+      imageName: img.imageName,
+      semester: semester ?? null,
+      batchId,
+      userId,
+      isAnonymous,
+    }));
+
+    const newSubmissions = await db
       .insert(submissions)
-      .values({
-        name,
-        word,
-        imageUrl: imageUrl ?? null,
-        imageName: imageUrl ? (imageUrl.split("/").pop() ?? null) : null,
-        userId,
-        isAnonymous,
-      })
+      .values(submissionData)
       .returning();
 
     return NextResponse.json({
       success: true,
-      submission,
+      submissions: newSubmissions.map((s) => ({
+        id: s.id,
+        imageUrl: s.imageUrl,
+        word: s.word,
+        semester: s.semester,
+        batchId: s.batchId,
+      })),
       isLate: isLateSubmission,
     });
   } catch (error) {

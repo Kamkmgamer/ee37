@@ -5,6 +5,7 @@ import { api } from "~/trpc/server";
 import { ProfileCard } from "../_components/profile/ProfileCard";
 import { PostCard } from "../_components/feed/PostCard";
 import { PageHeader } from "../_components/PageHeader";
+import MySubmissions from "../_components/MySubmissions";
 
 export default async function ProfilePage() {
   const session = await verifySession();
@@ -36,7 +37,6 @@ export default async function ProfilePage() {
       <PageHeader title="الملف الشخصي" showNav={true} activeNav="profile" />
 
       <main className="mx-auto max-w-2xl px-4 py-6">
-        {/* Profile Card */}
         <div className="mb-6">
           <ProfileCard
             profile={profile}
@@ -45,7 +45,16 @@ export default async function ProfilePage() {
           />
         </div>
 
-        {/* User's posts */}
+        <div className="mb-8">
+          <h2
+            className="font-display text-midnight mb-4 text-lg font-semibold"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            صور الذكريات
+          </h2>
+          <MySubmissions userId={session.userId} isOwnProfile={true} />
+        </div>
+
         <div className="space-y-6">
           <h2 className="font-display text-midnight text-lg font-semibold">
             منشوراتي

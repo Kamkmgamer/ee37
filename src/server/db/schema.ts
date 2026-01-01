@@ -56,9 +56,11 @@ export const submissions = createTable(
   (d) => ({
     id: d.uuid().primaryKey().defaultRandom(),
     name: d.varchar({ length: 256 }).notNull(),
-    word: d.varchar({ length: 50 }).notNull(),
+    word: d.varchar({ length: 50 }),
     imageUrl: d.text(),
     imageName: d.varchar({ length: 256 }),
+    semester: d.integer(),
+    batchId: d.uuid(),
     isAnonymous: d.boolean().default(false).notNull(),
     createdAt: d
       .timestamp({ withTimezone: true })
@@ -70,6 +72,8 @@ export const submissions = createTable(
     index("submission_name_idx").on(t.name),
     index("submission_user_idx").on(t.userId),
     index("submission_created_idx").on(t.createdAt),
+    index("submission_semester_idx").on(t.semester),
+    index("submission_batch_idx").on(t.batchId),
   ],
 );
 

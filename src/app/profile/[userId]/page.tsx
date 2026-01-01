@@ -5,6 +5,7 @@ import { verifySession } from "~/lib/session";
 import { api } from "~/trpc/server";
 import { ProfileCard } from "../../_components/profile/ProfileCard";
 import { PostCard } from "../../_components/feed/PostCard";
+import MySubmissions from "../../_components/MySubmissions";
 
 interface PublicProfilePageProps {
   params: Promise<{ userId: string }>;
@@ -38,7 +39,6 @@ export default async function PublicProfilePage({
 
   return (
     <div className="bg-paper min-h-screen">
-      {/* Header */}
       <header className="border-midnight/10 bg-paper/80 sticky top-0 z-40 border-b backdrop-blur-md">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
@@ -71,9 +71,7 @@ export default async function PublicProfilePage({
         </div>
       </header>
 
-      {/* Main content */}
       <main className="mx-auto max-w-2xl px-4 py-6">
-        {/* Profile Card */}
         <div className="mb-6">
           <ProfileCard
             profile={profile}
@@ -82,7 +80,16 @@ export default async function PublicProfilePage({
           />
         </div>
 
-        {/* User's posts */}
+        <div className="mb-8">
+          <h2
+            className="font-display text-midnight mb-4 text-lg font-semibold"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            صور الذكريات
+          </h2>
+          <MySubmissions userId={userId} isOwnProfile={false} />
+        </div>
+
         <div className="space-y-6">
           <h2 className="font-display text-midnight text-lg font-semibold">
             منشورات {profile.name}

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
@@ -9,9 +9,10 @@ import {
   X,
   Loader2,
   Camera,
-  Upload,
   Zap,
   Ghost,
+  ImagePlus,
+  Copy,
 } from "lucide-react";
 import { useUploadThing } from "~/lib/uploadthing";
 
@@ -23,72 +24,123 @@ interface SurveyFormProps {
   } | null;
 }
 
+interface ImageUpload {
+  id: string;
+  file: File;
+  preview: string;
+  word: string;
+}
+
+const SEMESTER_OPTIONS = [
+  { value: 1, label: "الفصل الأول" },
+  { value: 2, label: "الفصل الثاني" },
+  { value: 3, label: "الفصل الثالث" },
+  { value: 4, label: "الفصل الرابع" },
+  { value: 5, label: "الفصل الخامس" },
+];
+
 export default function SurveyForm({ user }: SurveyFormProps) {
   const [formData, setFormData] = useState({
     name: user?.name ?? "",
-    word: "",
   });
+  const [semester, setSemester] = useState<number | null>(null);
+  const [images, setImages] = useState<ImageUpload[]>([]);
+  const [commonWord, setCommonWord] = useState("");
+  const [useCommonWord, setUseCommonWord] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [isLateSubmission, setIsLateSubmission] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
   const { startUpload, isUploading } = useUploadThing("imageUploader", {
-    onUploadProgress: (progress) => {
-      setUploadProgress(progress);
-    },
     onUploadError: (error) => {
       setError(error.message);
       setIsLoading(false);
     },
   });
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 4 * 1024 * 1024) {
-        setError("حجم الصورة كبير جداً (الحد الأقصى 4 ميجا)");
+  const generateId = () => Math.random().toString(36).substring(2, 9);
+
+  const handleImageChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? []);
+      if (files.length === 0) return;
+
+      const maxTotalSize = 40 * 1024 * 1024;
+      const currentSize = images.reduce((acc, img) => acc + img.file.size, 0);
+      const newFilesSize = files.reduce((acc, file) => acc + file.size, 0);
+
+      if (currentSize + newFilesSize > maxTotalSize) {
+        setError("إجمالي حجم الصور لا يتجاوز 40 ميجابايت");
         return;
       }
+
+      const newImages: ImageUpload[] = files
+        .map((file) => {
+          if (file.size > 4 * 1024 * 1024) {
+            setError("حجم كل صورة لا يتجاوز 4 ميجابايت");
+            return null;
+          }
+          return {
+            id: generateId(),
+            file,
+            preview: URL.createObjectURL(file),
+            word: "",
+          };
+        })
+        .filter(Boolean) as ImageUpload[];
+
+      setImages((prev) => [...prev, ...newImages]);
       setError(null);
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    },
+    [images],
+  );
+
+  const removeImage = (id: string) => {
+    setImages((prev) => {
+      const image = prev.find((img) => img.id === id);
+      if (image) {
+        URL.revokeObjectURL(image.preview);
+      }
+      return prev.filter((img) => img.id !== id);
+    });
   };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  const updateImageWord = (id: string, word: string) => {
+    setImages((prev) =>
+      prev.map((img) => (img.id === id ? { ...img, word } : img)),
+    );
+  };
+
+  const applyCommonWordToAll = () => {
+    setImages((prev) => prev.map((img) => ({ ...img, word: commonWord })));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.word) return;
+    if (!formData.name || images.length === 0) {
+      setError("الاسم وصورة واحدة على الأقل مطلوبان");
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
-    setUploadProgress(0);
 
     try {
-      let imageUrl: string | undefined;
+      const files = images.map((img) => img.file);
+      const uploadResult = await startUpload(files);
 
-      // Upload image if provided
-      if (imageFile) {
-        const uploadResult = await startUpload([imageFile]);
-        if (uploadResult?.[0]?.ufsUrl) {
-          imageUrl = uploadResult[0].ufsUrl;
-        }
+      if (!uploadResult || uploadResult.length === 0) {
+        throw new Error("فشل في رفع الصور");
       }
 
-      // Save submission to database
+      const imagesData = uploadResult.map((result, index) => ({
+        imageUrl: result.ufsUrl,
+        imageName: images[index]?.file.name ?? "image",
+        word: useCommonWord ? commonWord : images[index]?.word || null,
+      }));
+
       const response = await fetch("/api/upload", {
         method: "POST",
         headers: {
@@ -96,8 +148,8 @@ export default function SurveyForm({ user }: SurveyFormProps) {
         },
         body: JSON.stringify({
           name: formData.name,
-          word: formData.word,
-          imageUrl,
+          images: imagesData,
+          semester,
           isAnonymous,
         }),
       });
@@ -106,7 +158,9 @@ export default function SurveyForm({ user }: SurveyFormProps) {
         throw new Error("فشل في إرسال المشاركة");
       }
 
-      const data = (await response.json()) as { isLate?: boolean };
+      const data = (await response.json()) as {
+        isLate?: boolean;
+      };
       setIsLateSubmission(data.isLate ?? false);
       setSubmitted(true);
     } catch (err) {
@@ -116,12 +170,23 @@ export default function SurveyForm({ user }: SurveyFormProps) {
     }
   };
 
+  const resetForm = () => {
+    images.forEach((img) => URL.revokeObjectURL(img.preview));
+    setSubmitted(false);
+    setIsLateSubmission(false);
+    setFormData({ name: user?.name ?? "" });
+    setSemester(null);
+    setImages([]);
+    setCommonWord("");
+    setUseCommonWord(false);
+    setIsAnonymous(false);
+  };
+
   return (
     <div
       className="noise-texture relative min-h-screen overflow-x-hidden bg-[var(--color-paper)]"
       dir="rtl"
     >
-      {/* Decorative Background */}
       <div className="pointer-events-none fixed inset-0">
         <div className="geometric-pattern absolute inset-0 opacity-20" />
         <motion.div
@@ -142,7 +207,6 @@ export default function SurveyForm({ user }: SurveyFormProps) {
         />
       </div>
 
-      {/* Header */}
       <header className="sticky top-0 z-40 flex items-center justify-between border-b border-[var(--color-midnight)]/5 bg-[var(--color-paper)]/80 px-6 py-4 backdrop-blur-xl">
         <Link href="/" className="group">
           <motion.div
@@ -162,11 +226,10 @@ export default function SurveyForm({ user }: SurveyFormProps) {
             استبيان الذكريات
           </span>
         </div>
-        <div className="w-12" /> {/* Spacer for centering */}
+        <div className="w-12" />
       </header>
 
-      {/* Main Content */}
-      <main className="relative z-10 flex w-full flex-1 flex-col px-6 py-12 md:mx-auto md:max-w-lg">
+      <main className="relative z-10 flex w-full flex-1 flex-col px-6 py-12 md:mx-auto md:max-w-3xl">
         <AnimatePresence mode="wait">
           {!submitted ? (
             <motion.div
@@ -177,7 +240,6 @@ export default function SurveyForm({ user }: SurveyFormProps) {
               transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               className="space-y-8"
             >
-              {/* Title Section */}
               <div className="space-y-4 text-center">
                 <motion.div
                   initial={{ scale: 0 }}
@@ -194,7 +256,7 @@ export default function SurveyForm({ user }: SurveyFormProps) {
                   سجل ذكرياتك
                 </h1>
                 <p className="text-lg text-[var(--color-midnight)]/50">
-                  شاركنا لحظتك بكلمة وصورة للذكرى
+                  شاركنا لحظاتك بصور وكلمات للذكرى
                 </p>
               </div>
 
@@ -209,101 +271,205 @@ export default function SurveyForm({ user }: SurveyFormProps) {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Image Upload */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                  className="space-y-5"
+                >
+                  <label className="mr-1 text-sm font-bold text-[var(--color-midnight)]/70">
+                    الفصل الدراسي (اختياري)
+                  </label>
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+                    {SEMESTER_OPTIONS.map((s) => (
+                      <button
+                        key={s.value}
+                        type="button"
+                        onClick={() =>
+                          setSemester(semester === s.value ? null : s.value)
+                        }
+                        className={`rounded-xl border-2 py-3 text-sm font-bold transition-all duration-300 ${
+                          semester === s.value
+                            ? "border-[var(--color-gold)] bg-[var(--color-gold)] text-[var(--color-midnight)]"
+                            : "border-[var(--color-midnight)]/10 bg-white text-[var(--color-midnight)] hover:border-[var(--color-gold)]/50"
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                  {semester && (
+                    <p className="text-xs text-[var(--color-gold)]">
+                      ✓ سيتم رفع الصور إلى خادم الفصل {semester}
+                    </p>
+                  )}
+                </motion.div>
+
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="group relative"
+                  className="space-y-4"
                 >
+                  <label className="text-sm font-bold text-[var(--color-midnight)]/70">
+                    الصور ({images.length})
+                  </label>
+
                   <label
-                    className={`block aspect-[4/3] w-full cursor-pointer overflow-hidden rounded-3xl transition-all duration-500 ${
-                      imagePreview
-                        ? "shadow-2xl"
-                        : "border-2 border-dashed border-[var(--color-midnight)]/10 bg-[var(--color-midnight)]/5 hover:border-[var(--color-gold)]/50 hover:bg-[var(--color-gold)]/5"
-                    } `}
+                    className={`block cursor-pointer overflow-hidden rounded-3xl border-2 border-dashed border-[var(--color-midnight)]/10 bg-[var(--color-midnight)]/5 transition-all duration-500 hover:border-[var(--color-gold)]/50 hover:bg-[var(--color-gold)]/5 ${
+                      images.length > 0 ? "border-solid bg-transparent" : ""
+                    }`}
                   >
                     <input
                       type="file"
                       accept="image/*"
+                      multiple
                       className="hidden"
                       onChange={handleImageChange}
                       disabled={isLoading}
                     />
 
-                    {imagePreview ? (
-                      <div className="relative h-full w-full">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={imagePreview}
-                          alt="Preview"
-                          className="h-full w-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-midnight)]/60 to-transparent" />
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            removeImage();
-                          }}
-                          disabled={isLoading}
-                          className="absolute top-4 left-4 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-paper)] text-[var(--color-midnight)] shadow-lg transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50"
-                        >
-                          <X size={18} />
-                        </button>
-                        <div className="absolute right-4 bottom-4 rounded-full bg-[var(--color-gold)] px-4 py-2 text-sm font-bold text-[var(--color-midnight)] shadow-lg">
-                          تم الاختيار ✓
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex h-full w-full flex-col items-center justify-center gap-4">
+                    {images.length === 0 ? (
+                      <div className="flex h-48 w-full flex-col items-center justify-center gap-4">
                         <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[var(--color-paper)] shadow-sm transition-transform duration-500 group-hover:scale-110">
-                          <Camera
+                          <ImagePlus
                             size={36}
                             className="text-[var(--color-gold)]"
                           />
                         </div>
                         <div className="text-center">
                           <p className="font-bold text-[var(--color-midnight)]">
-                            أضف صورة
+                            أضف صورك
                           </p>
                           <p className="mt-1 text-sm text-[var(--color-midnight)]/40">
-                            اختياري • الحد الأقصى 4 ميجا
+                            يمكنك اختيار عدة صور • الحد الأقصى 40 ميجابايت
                           </p>
                         </div>
                       </div>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-3 p-4 sm:grid-cols-4 md:grid-cols-5">
+                        {images.map((img) => (
+                          <motion.div
+                            key={img.id}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="group relative aspect-square"
+                          >
+                            <img
+                              src={img.preview}
+                              alt=""
+                              className="h-full w-full rounded-xl object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                removeImage(img.id);
+                              }}
+                              disabled={isLoading}
+                              className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-50"
+                            >
+                              <X size={14} />
+                            </button>
+                            <input
+                              type="text"
+                              placeholder="كلمة..."
+                              maxLength={20}
+                              value={img.word}
+                              onChange={(e) =>
+                                updateImageWord(img.id, e.target.value)
+                              }
+                              disabled={isLoading || useCommonWord}
+                              className="absolute right-0 bottom-0 left-0 w-full rounded-b-xl border-0 bg-[var(--color-midnight)]/60 px-2 py-1.5 text-center text-xs text-white placeholder:text-white/50 focus:bg-[var(--color-midnight)]/80 focus:outline-none"
+                            />
+                          </motion.div>
+                        ))}
+
+                        <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[var(--color-midnight)]/20 text-[var(--color-midnight)]/40 transition-colors hover:border-[var(--color-gold)]/50 hover:bg-[var(--color-gold)]/5 hover:text-[var(--color-gold)]">
+                          <ImagePlus size={24} />
+                          <span className="mt-1 text-xs">إضافة</span>
+                        </label>
+                      </div>
                     )}
                   </label>
-
-                  {/* Upload Progress */}
-                  {isUploading && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl bg-[var(--color-paper)]/90 backdrop-blur-sm">
-                      <Upload
-                        size={32}
-                        className="mb-4 animate-bounce text-[var(--color-gold)]"
-                      />
-                      <div className="h-2 w-3/4 overflow-hidden rounded-full bg-[var(--color-midnight)]/10">
-                        <motion.div
-                          className="h-full bg-[var(--color-gold)]"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
-                      <p className="mt-2 text-sm text-[var(--color-midnight)]/60">
-                        جاري الرفع... {uploadProgress}%
-                      </p>
-                    </div>
-                  )}
                 </motion.div>
 
-                {/* Input Fields */}
+                {images.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.35 }}
+                    className="rounded-2xl border border-[var(--color-gold)]/20 bg-[var(--color-gold)]/5 p-4"
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <label className="flex items-center gap-2 text-sm font-bold text-[var(--color-midnight)]">
+                        <Copy size={16} className="text-[var(--color-gold)]" />
+                        إضافة نفس الكلمة لجميع الصور
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setUseCommonWord(!useCommonWord)}
+                        className={`relative h-8 w-14 rounded-full transition-colors duration-300 ${
+                          useCommonWord
+                            ? "bg-[var(--color-gold)]"
+                            : "bg-[var(--color-midnight)]/10"
+                        }`}
+                      >
+                        <motion.div
+                          animate={{
+                            x: useCommonWord ? 28 : 4,
+                          }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 500,
+                            damping: 30,
+                          }}
+                          className="absolute top-1 left-0 h-6 w-6 rounded-full bg-white shadow-lg"
+                        />
+                      </button>
+                    </div>
+
+                    <AnimatePresence>
+                      {useCommonWord && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                        >
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              maxLength={20}
+                              value={commonWord}
+                              onChange={(e) => setCommonWord(e.target.value)}
+                              placeholder="كلمة واحدة للكل..."
+                              disabled={isLoading}
+                              className="flex-1 rounded-xl border-2 border-[var(--color-midnight)]/10 bg-white px-4 py-3 text-sm text-[var(--color-midnight)] placeholder:text-[var(--color-midnight)]/20 focus:border-[var(--color-gold)] focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={applyCommonWordToAll}
+                              disabled={!commonWord || isLoading}
+                              className="rounded-xl bg-[var(--color-gold)] px-4 py-3 text-sm font-bold text-[var(--color-midnight)] transition-colors hover:bg-[var(--color-gold)]/80 disabled:opacity-50"
+                            >
+                              تطبيق
+                            </button>
+                          </div>
+                          <p className="mt-2 text-xs text-[var(--color-midnight)]/40">
+                            مثال: سعادة، حماس، فخر... (اختياري)
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                )}
+
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                   className="space-y-5"
                 >
-                  {/* Name Input */}
                   <div className="space-y-2">
                     <label className="mr-1 text-sm font-bold text-[var(--color-midnight)]/70">
                       الاسم
@@ -327,7 +493,6 @@ export default function SurveyForm({ user }: SurveyFormProps) {
                     </div>
                   </div>
 
-                  {/* Anonymous Toggle */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -360,36 +525,8 @@ export default function SurveyForm({ user }: SurveyFormProps) {
                       />
                     </button>
                   </motion.div>
-
-                  {/* Word Input */}
-                  <div className="space-y-2">
-                    <label className="mr-1 text-sm font-bold text-[var(--color-midnight)]/70">
-                      كلمة للذكرى
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={20}
-                      value={formData.word}
-                      onChange={(e) =>
-                        setFormData({ ...formData, word: e.target.value })
-                      }
-                      placeholder="صف شعورك بكلمة واحدة..."
-                      disabled={isLoading}
-                      className="w-full rounded-2xl border-2 border-[var(--color-midnight)]/10 bg-white px-6 py-5 text-lg text-[var(--color-midnight)] shadow-sm transition-all duration-300 placeholder:text-[var(--color-midnight)]/20 focus:border-[var(--color-gold)] focus:shadow-lg focus:outline-none disabled:opacity-50"
-                    />
-                    <div className="flex justify-between px-2">
-                      <p className="text-xs text-[var(--color-midnight)]/30">
-                        مثال: سعادة، حماس، فخر...
-                      </p>
-                      <p className="text-xs font-bold text-[var(--color-gold)]">
-                        {formData.word.length}/20
-                      </p>
-                    </div>
-                  </div>
                 </motion.div>
 
-                {/* Submit Button */}
                 <motion.button
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -397,19 +534,19 @@ export default function SurveyForm({ user }: SurveyFormProps) {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   type="submit"
-                  disabled={!formData.name || !formData.word || isLoading}
+                  disabled={!formData.name || images.length === 0 || isLoading}
                   className="shimmer-btn mt-8 flex w-full items-center justify-center gap-3 rounded-2xl py-5 text-lg font-bold text-[var(--color-midnight)] shadow-[var(--color-gold)]/30 shadow-2xl disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isLoading ? (
                     <>
                       <Loader2 size={22} className="animate-spin" />
                       <span>
-                        {isUploading ? "جاري رفع الصورة..." : "جاري الإرسال..."}
+                        {isUploading ? `جاري رفع الصور...` : "جاري الإرسال..."}
                       </span>
                     </>
                   ) : (
                     <>
-                      <span>إرسال المشاركة</span>
+                      <span>إرسال {images.length} صورة/صور</span>
                       <Send size={20} className="rotate-180" />
                     </>
                   )}
@@ -477,19 +614,28 @@ export default function SurveyForm({ user }: SurveyFormProps) {
                 )}
               </div>
 
-              {imagePreview && (
+              {images.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="h-48 w-48 rotate-3 overflow-hidden rounded-[2rem] border-4 border-[var(--color-gold)]/30 shadow-2xl"
+                  className="grid grid-cols-3 gap-2 rounded-2xl border-4 border-[var(--color-gold)]/30 p-2"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={imagePreview}
-                    alt="Shared"
-                    className="h-full w-full object-cover"
-                  />
+                  {images.slice(0, 6).map((img, i) => (
+                    <motion.div
+                      key={img.id}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.5 + i * 0.1 }}
+                      className="aspect-square overflow-hidden rounded-xl"
+                    >
+                      <img
+                        src={img.preview}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    </motion.div>
+                  ))}
                 </motion.div>
               )}
 
@@ -504,15 +650,7 @@ export default function SurveyForm({ user }: SurveyFormProps) {
                   </motion.button>
                 </Link>
                 <button
-                  onClick={() => {
-                    setSubmitted(false);
-                    setIsLateSubmission(false);
-                    // Don't reset name if it's from user
-                    setFormData({ name: user?.name ?? "", word: "" });
-                    setIsAnonymous(false);
-                    setImageFile(null);
-                    setImagePreview(null);
-                  }}
+                  onClick={resetForm}
                   className="block w-full py-4 text-sm font-medium text-[var(--color-midnight)]/40 transition-colors hover:text-[var(--color-gold)]"
                 >
                   إرسال مشاركة أخرى
@@ -523,7 +661,6 @@ export default function SurveyForm({ user }: SurveyFormProps) {
         </AnimatePresence>
       </main>
 
-      {/* Footer */}
       <footer className="relative z-10 py-8 text-center">
         <div className="flex items-center justify-center gap-3 text-[var(--color-midnight)]/30">
           <div className="h-[1px] w-12 bg-[var(--color-gold)]/30" />
