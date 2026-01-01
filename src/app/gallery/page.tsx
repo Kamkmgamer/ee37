@@ -14,7 +14,6 @@ import {
   ChevronRight,
   Maximize2,
   Minimize2,
-  Sparkles,
 } from "lucide-react";
 import { PageHeader } from "../_components/PageHeader";
 
@@ -104,9 +103,8 @@ export default function GalleryPage() {
     fetch("/api/submissions")
       .then((res) => res.json())
       .then((data: { submissions?: Submission[] }) => {
-        const subs = data.submissions ?? [];
-        setSubmissions(subs);
-        setFilteredSubmissions(subs);
+        setSubmissions(data.submissions ?? []);
+        setFilteredSubmissions(data.submissions ?? []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -174,18 +172,21 @@ export default function GalleryPage() {
     if (card) setSelectedCard(card);
   };
 
-  const navigateLightbox = (direction: "prev" | "next") => {
-    const total = filteredSubmissions.length;
-    let newIndex = lightboxIndex;
-    if (direction === "prev") {
-      newIndex = (lightboxIndex - 1 + total) % total;
-    } else {
-      newIndex = (lightboxIndex + 1) % total;
-    }
-    setLightboxIndex(newIndex);
-    const card = filteredSubmissions[newIndex];
-    if (card) setSelectedCard(card);
-  };
+  const navigateLightbox = useCallback(
+    (direction: "prev" | "next") => {
+      const total = filteredSubmissions.length;
+      let newIndex = lightboxIndex;
+      if (direction === "prev") {
+        newIndex = (lightboxIndex - 1 + total) % total;
+      } else {
+        newIndex = (lightboxIndex + 1) % total;
+      }
+      setLightboxIndex(newIndex);
+      const card = filteredSubmissions[newIndex];
+      if (card) setSelectedCard(card);
+    },
+    [filteredSubmissions, lightboxIndex],
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -196,7 +197,7 @@ export default function GalleryPage() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedCard, lightboxIndex]);
+  }, [selectedCard, lightboxIndex, navigateLightbox]);
 
   const hasBatches = submissions.some((s) => s.batchId);
   const currentFilterLabel =
@@ -455,12 +456,6 @@ export default function GalleryPage() {
                                 : ""
                             }`}
                           >
-                            {hasBatchSiblings && (
-                              <div className="absolute top-2 right-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-gold)] text-[var(--color-midnight)] shadow-lg">
-                                <Sparkles size={12} />
-                              </div>
-                            )}
-
                             <div
                               className={`aspect-[3/4] ${
                                 !submission.imageUrl
@@ -469,6 +464,7 @@ export default function GalleryPage() {
                               }`}
                             >
                               {submission.imageUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
                                 <img
                                   src={submission.imageUrl}
                                   alt={submission.name}
@@ -713,6 +709,7 @@ export default function GalleryPage() {
                 className={`relative ${isFullscreen ? "h-full" : "aspect-square"}`}
               >
                 {selectedCard.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={selectedCard.imageUrl}
                     alt={selectedCard.name}
