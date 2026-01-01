@@ -132,11 +132,11 @@ export default function GalleryPage() {
       if (sub.semester) {
         const year = getYearFromSemester(sub.semester);
         const key = `year-${year}-semester-${sub.semester}`;
-        if (!groups[key]) groups[key] = [];
+        groups[key] ??= [];
         groups[key].push(sub);
       } else {
         const key = "no-semester";
-        if (!groups[key]) groups[key] = [];
+        groups[key] ??= [];
         groups[key].push(sub);
       }
     });
