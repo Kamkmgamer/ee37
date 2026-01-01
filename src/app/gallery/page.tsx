@@ -103,9 +103,10 @@ export default function GalleryPage() {
   useEffect(() => {
     fetch("/api/submissions")
       .then((res) => res.json())
-      .then((data: Submission[]) => {
-        setSubmissions(data);
-        setFilteredSubmissions(data);
+      .then((data: { submissions?: Submission[] }) => {
+        const subs = data.submissions ?? [];
+        setSubmissions(subs);
+        setFilteredSubmissions(subs);
         setLoading(false);
       })
       .catch(() => setLoading(false));
