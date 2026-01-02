@@ -12,10 +12,12 @@ import {
   MessageCircle,
   AlertTriangle,
   MoreHorizontal,
+  Lock,
 } from "lucide-react";
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { ReportModal } from "../modals/ReportModal";
+import { useToast } from "../ui/Toast";
 
 interface ProfileCardProps {
   profile: {
@@ -41,12 +43,14 @@ export function ProfileCard({
 }: ProfileCardProps) {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const joinDate = new Date(profile.createdAt).toLocaleDateString("ar-SA", {
     year: "numeric",
     month: "long",
   });
 
   const router = useRouter();
+  const toast = useToast();
   const createConversationMutation = api.chat.createConversation.useMutation({
     onSuccess: (data) => {
       router.push(`/chat?c=${data.conversationId}`);
@@ -58,6 +62,37 @@ export function ProfileCard({
       type: "private",
       participantIds: [profile.userId],
     });
+  };
+
+  const handleChangePassword = async () => {
+    setShowConfirmDialog(true);
+  };
+
+  const confirmChangePassword = async () => {
+    setShowConfirmDialog(false);
+
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: profile.email }),
+      });
+
+      const data = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        toast.error(data.error ?? "حدث خطأ. يرجى المحاولة مرة أخرى.");
+        return;
+      }
+
+      toast.success(
+        "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني",
+      );
+    } catch {
+      toast.error("حدث خطأ. يرجى المحاولة مرة أخرى.");
+    }
   };
 
   return (
@@ -152,16 +187,25 @@ export function ProfileCard({
             )}
 
             {isOwnProfile && (
-              <Link href="/profile/edit">
-                <motion.button
-                  className="bg-gold text-midnight hover:bg-gold-light flex items-center gap-2 rounded-xl px-4 py-2 font-medium transition-colors"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleChangePassword}
+                  className="flex items-center gap-2 rounded-xl border border-[#0A1628]/20 bg-white px-4 py-2 font-medium text-[#0A1628] transition-colors hover:bg-[#0A1628]/5"
                 >
-                  <Edit2 size={16} />
-                  <span>تعديل</span>
-                </motion.button>
-              </Link>
+                  <Lock size={16} />
+                  <span>كلمة المرور</span>
+                </button>
+                <Link href="/profile/edit">
+                  <motion.button
+                    className="bg-gold text-midnight hover:bg-gold-light flex items-center gap-2 rounded-xl px-4 py-2 font-medium transition-colors"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Edit2 size={16} />
+                    <span>تعديل</span>
+                  </motion.button>
+                </Link>
+              </div>
             )}
           </div>
         </div>
@@ -172,6 +216,48 @@ export function ProfileCard({
           targetId={profile.userId}
           targetType="user"
         />
+
+        {/* Confirmation Dialog */}
+        {showConfirmDialog && (
+          <>
+            <div
+              className="fixed inset-0 z-50 bg-black/50"
+              onClick={() => setShowConfirmDialog(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="fixed top-1/2 left-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-[#FAF7F0] p-6 shadow-2xl"
+            >
+              <div className="mb-4 flex items-center justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#D4A853]/20">
+                  <Lock className="h-8 w-8 text-[#D4A853]" />
+                </div>
+              </div>
+              <h3 className="mb-2 text-center text-xl font-bold text-[#0A1628]">
+                تغيير كلمة المرور
+              </h3>
+              <p className="mb-6 text-center text-[#0A1628]/60">
+                هل أنت متأكد أنك تريد تغيير كلمة المرور؟ سيتم إرسال رابط لإعادة
+                تعيين كلمة المرور إلى بريدك الإلكتروني.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmDialog(false)}
+                  className="flex-1 rounded-lg border border-[#0A1628]/20 py-3 font-bold text-[#0A1628] transition-all hover:bg-[#0A1628]/5"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={confirmChangePassword}
+                  className="flex-1 cursor-pointer rounded-lg bg-[#0A1628] py-3 font-bold text-[#D4A853] transition-all hover:bg-[#0A1628]/90"
+                >
+                  نعم، متأكد
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
 
         {/* Name and Bio */}
         <div className="mb-4">
