@@ -121,6 +121,30 @@ export const emailVerificationCodes = createTable(
   ],
 );
 
+// Password Reset Tokens Table
+export const passwordResetTokens = createTable(
+  "password_reset_token",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    userId: d
+      .uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: d.varchar({ length: 64 }).notNull(),
+    expiresAt: d.timestamp({ withTimezone: true }).notNull(),
+    usedAt: d.timestamp({ withTimezone: true }),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("reset_token_idx").on(t.token),
+    index("reset_user_idx").on(t.userId),
+    index("reset_expires_idx").on(t.expiresAt),
+  ],
+);
+
 export const users = createTable(
   "user",
   (d) => ({
@@ -677,6 +701,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     relationName: "restriction_creator",
   }),
   auditLogs: many(adminAuditLog),
+  passwordResetTokens: many(passwordResetTokens),
 }));
 
 export const reportsRelations = relations(reports, ({ one }) => ({
@@ -867,6 +892,17 @@ export const userRestrictionsRelations = relations(
       fields: [userRestrictions.createdBy],
       references: [users.id],
       relationName: "restriction_creator",
+    }),
+  }),
+);
+
+// Password Reset Tokens Relations
+export const passwordResetTokensRelations = relations(
+  passwordResetTokens,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [passwordResetTokens.userId],
+      references: [users.id],
     }),
   }),
 );
