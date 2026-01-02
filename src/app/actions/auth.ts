@@ -2,19 +2,26 @@
 
 import { z } from "zod";
 import { db } from "~/server/db";
-import { users } from "~/server/db/schema";
+import { users, emailVerificationCodes } from "~/server/db/schema";
 import { eq, or } from "drizzle-orm";
-import { hashPassword, comparePassword } from "~/server/auth";
+import { comparePassword } from "~/server/auth";
 import { createSession, deleteSession } from "~/lib/session";
 import { redirect } from "next/navigation";
-
+import {
+  sendVerificationEmail,
+  generateVerificationCode,
+  getVerificationCodeExpiry,
+} from "~/lib/email";
 
 const signupSchema = z.object({
   name: z.string().min(2, "الاسم يجب أن يكون حرفين على الأقل"),
   collegeId: z
     .string()
     .length(12, "الرقم الجامعي يجب أن يكون 12 رقماً")
-    .regex(/^(2018|2019|2020)/, "الرقم الجامعي يجب أن يبدأ بـ 2018، 2019، أو 2020"),
+    .regex(
+      /^(2018|2019|2020)/,
+      "الرقم الجامعي يجب أن يبدأ بـ 2018، 2019، أو 2020",
+    ),
   email: z.string().email("البريد الإلكتروني غير صحيح"),
   password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
 });
@@ -34,9 +41,13 @@ type AuthState = {
     form?: string;
   };
   success?: boolean;
+  redirectUrl?: string;
 };
 
-export async function signup(prevState: AuthState | null, formData: FormData): Promise<AuthState> {
+export async function signup(
+  prevState: AuthState | null,
+  formData: FormData,
+): Promise<AuthState> {
   const data = Object.fromEntries(formData.entries());
   const validation = signupSchema.safeParse(data);
 
@@ -61,32 +72,55 @@ export async function signup(prevState: AuthState | null, formData: FormData): P
     };
   }
 
-  const hashedPassword = await hashPassword(password);
-
-  const [newUser] = await db
-    .insert(users)
-    .values({
-      name,
-      collegeId,
-      email: normalizedEmail,
-      password: hashedPassword,
-    })
-    .returning();
-
-  if (!newUser) {
-     return { error: { form: "فشل إنشاء المستخدم" } };
-  }
-
-  await createSession({
-    userId: newUser.id,
-    email: newUser.email,
-    name: newUser.name,
+  const existingCode = await db.query.emailVerificationCodes.findFirst({
+    where: eq(emailVerificationCodes.email, normalizedEmail),
   });
 
-  return { success: true };
+  if (existingCode) {
+    await db
+      .delete(emailVerificationCodes)
+      .where(eq(emailVerificationCodes.email, normalizedEmail));
+  }
+
+  const code = generateVerificationCode();
+  const expiresAt = getVerificationCodeExpiry();
+
+  const { hashPassword } = await import("~/server/auth");
+  const hashedPassword = await hashPassword(password);
+
+  await db.insert(emailVerificationCodes).values({
+    email: normalizedEmail,
+    code,
+    name,
+    collegeId,
+    hashedPassword,
+    expiresAt,
+  });
+
+  const result = await sendVerificationEmail({
+    email: normalizedEmail,
+    code,
+    userName: name,
+  });
+
+  if (!result.success) {
+    return {
+      error: {
+        form: "فشل إرسال بريد التحقق. يرجى المحاولة مرة أخرى.",
+      },
+    };
+  }
+
+  return {
+    success: true,
+    redirectUrl: `/verification?email=${encodeURIComponent(normalizedEmail)}&name=${encodeURIComponent(name)}`,
+  };
 }
 
-export async function login(prevState: AuthState | null, formData: FormData): Promise<AuthState> {
+export async function login(
+  prevState: AuthState | null,
+  formData: FormData,
+): Promise<AuthState> {
   const data = Object.fromEntries(formData.entries());
   const validation = loginSchema.safeParse(data);
 
@@ -101,8 +135,8 @@ export async function login(prevState: AuthState | null, formData: FormData): Pr
 
   const user = await db.query.users.findFirst({
     where: or(
-      eq(users.email, normalizedIdentifier), 
-      eq(users.collegeId, identifier)
+      eq(users.email, normalizedIdentifier),
+      eq(users.collegeId, identifier),
     ),
   });
 
