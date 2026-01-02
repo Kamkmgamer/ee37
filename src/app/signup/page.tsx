@@ -13,18 +13,14 @@ import {
 
 export default function SignupPage() {
   const [state, action, isPending] = useActionState(signup, null);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [showSuccess] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    if (state?.success) {
-      setShowSuccess(true);
-      const timer = setTimeout(() => {
-        router.push("/");
-      }, 2000);
-      return () => clearTimeout(timer);
+    if (state?.success && state?.redirectUrl) {
+      router.push(state.redirectUrl);
     }
-  }, [state?.success, router]);
+  }, [state?.success, state?.redirectUrl, router]);
 
   return (
     <div
@@ -35,7 +31,6 @@ export default function SignupPage() {
 
       <AuthCardEntry>
         <div className="relative overflow-hidden rounded-2xl bg-[#FAF7F0] p-8 shadow-2xl">
-          {/* Decorative blueprint lines */}
           <div className="absolute top-0 left-0 h-1 w-full bg-[#D4A853]" />
 
           <h1 className="mb-2 text-3xl font-bold text-[#0A1628]">
@@ -113,12 +108,10 @@ export default function SignupPage() {
             <AnimatedError>{state?.error?.form}</AnimatedError>
 
             <button
-              disabled={isPending || showSuccess}
+              disabled={isPending}
               className="w-full cursor-pointer rounded-lg bg-[#0A1628] py-3 font-bold text-[#D4A853] transition-all hover:bg-[#0A1628]/90 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isPending || showSuccess
-                ? "جاري إنشاء الحساب..."
-                : "إنشاء الحساب"}
+              {isPending ? "جاري إنشاء الحساب..." : "إنشاء الحساب"}
             </button>
           </form>
 
