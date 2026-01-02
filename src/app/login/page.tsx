@@ -72,6 +72,15 @@ export default function LoginPage() {
               <AnimatedError>{state?.error?.password}</AnimatedError>
             </div>
 
+            <div className="flex justify-end">
+              <Link
+                href="/forgot-password"
+                className="text-sm font-medium text-[#D4A853] hover:underline"
+              >
+                نسيت كلمة المرور؟
+              </Link>
+            </div>
+
             <AnimatedError>{state?.error?.form}</AnimatedError>
 
             <button
