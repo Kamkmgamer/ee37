@@ -13,7 +13,6 @@ import {
   Globe,
   Server,
   Code,
-  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "../_components/PageHeader";
