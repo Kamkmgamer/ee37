@@ -99,6 +99,28 @@ export const posts = createTable(
   (t) => [index("name_idx").on(t.name)],
 );
 
+// Email Verification Codes Table
+export const emailVerificationCodes = createTable(
+  "email_verification_code",
+  (d) => ({
+    id: d.uuid().primaryKey().defaultRandom(),
+    email: d.varchar({ length: 256 }).notNull(),
+    code: d.varchar({ length: 6 }).notNull(),
+    name: d.varchar({ length: 256 }).notNull(),
+    collegeId: d.varchar({ length: 12 }).notNull(),
+    hashedPassword: d.varchar({ length: 256 }).notNull(),
+    expiresAt: d.timestamp({ withTimezone: true }).notNull(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("verification_email_idx").on(t.email),
+    index("verification_expires_idx").on(t.expiresAt),
+  ],
+);
+
 export const users = createTable(
   "user",
   (d) => ({
@@ -107,6 +129,7 @@ export const users = createTable(
     collegeId: d.varchar({ length: 12 }).notNull(),
     email: d.varchar({ length: 256 }).notNull(),
     password: d.varchar({ length: 256 }).notNull(),
+    emailVerified: d.boolean().default(false).notNull(),
     createdAt: d
       .timestamp({ withTimezone: true })
       .$defaultFn(() => new Date())
