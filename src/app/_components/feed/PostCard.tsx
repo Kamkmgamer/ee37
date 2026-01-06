@@ -18,6 +18,7 @@ import {
 import { ReactionBar } from "./ReactionBar";
 import { CommentSection } from "./comments/CommentSection";
 import { ReportModal } from "../modals/ReportModal";
+import { useToast } from "../ui/Toast";
 import { api } from "~/trpc/react";
 
 interface PostMedia {
@@ -60,6 +61,7 @@ export function PostCard({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const utils = api.useUtils();
+  const toast = useToast();
 
   const [isDeleted, setIsDeleted] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -69,6 +71,8 @@ export function PostCard({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editError, setEditError] = useState(false);
 
   const handleMediaClick = (media: PostMedia) => {
     const newParams = new URLSearchParams(searchParams.toString());
@@ -83,18 +87,28 @@ export function PostCard({
   const deletePost = api.feed.deletePost.useMutation({
     onSuccess: () => {
       setIsDeleted(true);
+      toast.success("تم حذف المنشور بنجاح");
       void utils.feed.getPosts.invalidate();
       void utils.feed.getPostsByUser.invalidate({ userId: post.authorId });
+    },
+    onError: () => {
+      toast.error("حدث خطأ أثناء حذف المنشور");
     },
   });
 
   const editPost = api.feed.editPost.useMutation({
     onSuccess: () => {
       setIsEditing(false);
+      setEditError(false);
       setShowMenu(false);
+      toast.success("تم تعديل المنشور بنجاح");
       void utils.feed.getPosts.invalidate();
       void utils.feed.getPostsByUser.invalidate({ userId: post.authorId });
       void utils.feed.getPost.invalidate({ postId: post.id });
+    },
+    onError: () => {
+      setEditError(true);
+      toast.error("حدث خطأ أثناء تعديل المنشور");
     },
   });
 
@@ -161,17 +175,28 @@ export function PostCard({
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
+              aria-haspopup="menu"
+              aria-expanded={showMenu}
+              aria-controls="post-menu"
+              aria-label="خيارات المنشور"
               className="hover:bg-midnight/5 rounded-lg p-2 transition-colors"
             >
-              <MoreHorizontal size={20} className="text-midnight/50" />
+              <MoreHorizontal
+                size={20}
+                className="text-midnight/50"
+                aria-hidden="true"
+              />
             </button>
             {showMenu && (
               <>
                 <div
-                  className="fixed inset-0 z-40"
+                  className="fixed inset-0 z-40 cursor-default"
                   onClick={() => setShowMenu(false)}
+                  aria-hidden="true"
                 />
                 <motion.div
+                  id="post-menu"
+                  role="menu"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="absolute top-full left-0 z-50 mt-1 min-w-[140px] rounded-xl bg-white p-2 shadow-lg ring-1 ring-black/5"
@@ -183,6 +208,7 @@ export function PostCard({
                           setIsEditing(true);
                           setShowMenu(false);
                         }}
+                        aria-label="تعديل المنشور"
                         className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
                       >
                         <Pencil size={16} />
@@ -190,12 +216,11 @@ export function PostCard({
                       </button>
                       <button
                         onClick={() => {
-                          void deletePost.mutateAsync({
-                            postId: post.id,
-                          });
+                          setShowDeleteConfirm(true);
                           setShowMenu(false);
                         }}
                         disabled={deletePost.isPending}
+                        aria-label="حذف المنشور"
                         className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-red-500 transition-colors hover:bg-red-50"
                       >
                         {deletePost.isPending ? (
@@ -232,12 +257,73 @@ export function PostCard({
         targetType="post"
       />
 
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+            onClick={() => setShowDeleteConfirm(false)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+            >
+              <h3 className="text-midnight mb-2 text-lg font-semibold">
+                حذف المنشور
+              </h3>
+              <p className="mb-6 text-gray-600">
+                هل أنت متأكد من حذف هذا المنشور؟ لا يمكن التراجع عن هذا الإجراء.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deletePost.isPending}
+                  className="rounded-lg px-4 py-2 text-gray-600 hover:bg-gray-100"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={() => {
+                    void deletePost.mutateAsync({ postId: post.id });
+                    setShowDeleteConfirm(false);
+                  }}
+                  disabled={deletePost.isPending}
+                  className="flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-white hover:bg-red-600 disabled:opacity-50"
+                >
+                  {deletePost.isPending && (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  )}
+                  حذف
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+
       {/* Content */}
       {isEditing ? (
         <div className="mb-4">
+          {editError && (
+            <div className="mb-2 flex items-center justify-between rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+              <span>حدث خطأ. يرجى المحاولة مرة أخرى.</span>
+              <button
+                onClick={() => setEditError(false)}
+                className="hover:text-red-800"
+                aria-label="Dismiss error"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
           <textarea
             value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
+            onChange={(e) => {
+              setEditContent(e.target.value);
+              setEditError(false);
+            }}
             className="min-h-[100px] w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-3 text-right focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] focus:outline-none"
             autoFocus
           />

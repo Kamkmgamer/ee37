@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { CommentForm } from "./CommentForm";
 import {
   MoreHorizontal,
@@ -14,8 +15,8 @@ import {
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ReportModal } from "../../modals/ReportModal";
-
 import { ReactionBar } from "../ReactionBar";
+import { useToast } from "../../ui/Toast";
 
 export interface Comment {
   id: string;
@@ -60,19 +61,32 @@ export function CommentItem({
   const [editContent, setEditContent] = useState(comment.content);
   const [showMenu, setShowMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editError, setEditError] = useState(false);
 
   const utils = api.useUtils();
+  const toast = useToast();
 
   const deleteComment = api.comments.delete.useMutation({
     onSuccess: () => {
+      toast.success("تم حذف التعليق بنجاح");
       void utils.comments.getByPostId.invalidate({ postId });
+    },
+    onError: () => {
+      toast.error("حدث خطأ أثناء حذف التعليق");
     },
   });
 
   const editComment = api.comments.edit.useMutation({
     onSuccess: () => {
       setIsEditing(false);
+      setEditError(false);
+      toast.success("تم تعديل التعليق بنجاح");
       void utils.comments.getByPostId.invalidate({ postId });
+    },
+    onError: () => {
+      setEditError(true);
+      toast.error("حدث خطأ أثناء تعديل التعليق");
     },
   });
 
@@ -135,17 +149,28 @@ export function CommentItem({
               <div className="relative">
                 <button
                   onClick={() => setShowMenu(!showMenu)}
+                  aria-haspopup="menu"
+                  aria-expanded={showMenu}
+                  aria-controls="comment-menu"
+                  aria-label="خيارات التعليق"
                   className="rounded-full p-1 text-gray-400 hover:bg-black/5 hover:text-gray-600"
                 >
-                  <MoreHorizontal size={16} />
+                  <MoreHorizontal size={16} aria-hidden="true" />
                 </button>
                 {showMenu && (
                   <>
                     <div
-                      className="fixed inset-0 z-40"
+                      className="fixed inset-0 z-40 cursor-default"
                       onClick={() => setShowMenu(false)}
+                      aria-hidden="true"
                     />
-                    <div className="absolute top-full left-0 z-50 mt-1 min-w-[120px] rounded-lg bg-white p-1 shadow-lg ring-1 ring-black/5">
+                    <motion.div
+                      id="comment-menu"
+                      role="menu"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="absolute top-full left-0 z-50 mt-1 min-w-[120px] rounded-lg bg-white p-1 shadow-lg ring-1 ring-black/5"
+                    >
                       {isAuthor ? (
                         <>
                           <button
@@ -153,6 +178,7 @@ export function CommentItem({
                               setIsEditing(true);
                               setShowMenu(false);
                             }}
+                            aria-label="تعديل التعليق"
                             className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
                           >
                             <Pencil size={14} />
@@ -160,15 +186,15 @@ export function CommentItem({
                           </button>
                           <button
                             onClick={() => {
-                              void deleteComment.mutate({
-                                commentId: comment.id,
-                              });
+                              setShowDeleteConfirm(true);
+                              setShowMenu(false);
                             }}
                             disabled={deleteComment.isPending}
+                            aria-label="حذف التعليق"
                             className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
                           >
                             {deleteComment.isPending ? (
-                              <span className="h-3 w-3 animate-spin rounded-full border border-red-600/30 border-t-red-600" />
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-red-600/30 border-t-red-600" />
                             ) : (
                               <Trash2 size={14} />
                             )}
@@ -181,13 +207,14 @@ export function CommentItem({
                             setShowReportModal(true);
                             setShowMenu(false);
                           }}
+                          aria-label="إبلاغ عن التعليق"
                           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-orange-600 hover:bg-orange-50"
                         >
                           <AlertTriangle size={14} />
                           <span>إبلاغ</span>
                         </button>
                       )}
-                    </div>
+                    </motion.div>
                   </>
                 )}
               </div>
@@ -201,11 +228,73 @@ export function CommentItem({
             targetType="comment"
           />
 
+          {/* Delete Confirmation Dialog */}
+          {showDeleteConfirm && (
+            <>
+              <div
+                className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+                onClick={() => setShowDeleteConfirm(false)}
+              />
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+                >
+                  <h3 className="text-midnight mb-2 text-lg font-semibold">
+                    حذف التعليق
+                  </h3>
+                  <p className="mb-6 text-gray-600">
+                    هل أنت متأكد من حذف هذا التعليق؟ لا يمكن التراجع عن هذا
+                    الإجراء.
+                  </p>
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      disabled={deleteComment.isPending}
+                      className="rounded-lg px-4 py-2 text-gray-600 hover:bg-gray-100"
+                    >
+                      إلغاء
+                    </button>
+                    <button
+                      onClick={() => {
+                        void deleteComment.mutate({ commentId: comment.id });
+                        setShowDeleteConfirm(false);
+                      }}
+                      disabled={deleteComment.isPending}
+                      className="flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-white hover:bg-red-600 disabled:opacity-50"
+                    >
+                      {deleteComment.isPending && (
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      )}
+                      حذف
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            </>
+          )}
+
           {isEditing ? (
             <div className="mt-2">
+              {editError && (
+                <div className="mb-2 flex items-center justify-between rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
+                  <span>حدث خطأ. يرجى المحاولة مرة أخرى.</span>
+                  <button
+                    onClick={() => setEditError(false)}
+                    className="hover:text-red-800"
+                    aria-label="Dismiss error"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
               <textarea
                 value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
+                onChange={(e) => {
+                  setEditContent(e.target.value);
+                  setEditError(false);
+                }}
                 className="min-h-[60px] w-full resize-none rounded-lg border border-gray-200 bg-white p-2 text-sm focus:border-[#D4AF37] focus:outline-none"
                 autoFocus
               />
@@ -215,21 +304,26 @@ export function CommentItem({
                     setIsEditing(false);
                     setEditContent(comment.content);
                   }}
-                  className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  disabled={editComment.isPending}
+                  className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
                 >
                   <X size={16} />
                 </button>
                 <button
                   onClick={() => {
-                    editComment.mutate({
+                    void editComment.mutate({
                       commentId: comment.id,
                       content: editContent,
                     });
                   }}
-                  className="rounded-md bg-[#D4AF37] p-1 text-white hover:bg-[#C5A028]"
-                  disabled={!editContent.trim()}
+                  disabled={editComment.isPending || !editContent.trim()}
+                  className="rounded-md bg-[#D4AF37] p-1 text-white hover:bg-[#C5A028] disabled:opacity-50"
                 >
-                  <Check size={16} />
+                  {editComment.isPending ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  ) : (
+                    <Check size={16} />
+                  )}
                 </button>
               </div>
             </div>
