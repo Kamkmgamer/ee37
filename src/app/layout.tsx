@@ -7,6 +7,7 @@ import { TRPCReactProvider } from "~/trpc/react";
 import { ChatWidgetWrapper } from "./_components/ChatWidgetWrapper";
 import { MediaViewer } from "./_components/feed/MediaViewer";
 import { verifySession } from "~/lib/session";
+import { ConvexClientProvider } from "./ConvexClientProvider";
 
 export const viewport: Viewport = {
   themeColor: "#D4A853",
@@ -35,18 +36,17 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await verifySession();
   return (
-    <html
-      lang="ar"
-      dir="rtl"
-    >
+    <html lang="ar" dir="rtl">
       <body className="font-sans antialiased" suppressHydrationWarning>
-        <TRPCReactProvider>
-          <ToastProvider>
-            {children}
-            {session && <ChatWidgetWrapper userId={session.userId} />}
-            <MediaViewer />
-          </ToastProvider>
-        </TRPCReactProvider>
+        <ConvexClientProvider>
+          <TRPCReactProvider>
+            <ToastProvider>
+              {children}
+              {session && <ChatWidgetWrapper user={session} />}
+              <MediaViewer />
+            </ToastProvider>
+          </TRPCReactProvider>
+        </ConvexClientProvider>
       </body>
     </html>
   );

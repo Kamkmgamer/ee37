@@ -7,9 +7,16 @@ import { ChatList } from "./chat/ChatList";
 
 interface ChatWidgetProps {
   userId: string;
+  user: {
+    userId: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    collegeId?: string;
+  } | null;
 }
 
-export function ChatWidget({ userId }: ChatWidgetProps) {
+export function ChatWidget({ userId, user }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const widgetRef = useRef<HTMLDivElement>(null);
 
@@ -44,7 +51,7 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
             transition={{ duration: 0.2 }}
             className="fixed right-6 bottom-20 z-50 flex h-[600px] w-[350px] flex-col overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-[#0F0F0F]/95 shadow-2xl backdrop-blur-xl sm:right-10 sm:w-[400px]"
           >
-            <ChatList userId={userId} />
+            <ChatList userId={userId} user={user} />
           </motion.div>
         )}
       </AnimatePresence>
