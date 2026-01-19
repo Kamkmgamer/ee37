@@ -30,6 +30,7 @@
     "@uploadthing/react": "^7.3.3",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
+    "convex": "^1.31.5",
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.41.0",
     "framer-motion": "^12.23.26",
