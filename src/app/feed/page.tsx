@@ -49,6 +49,7 @@ export default async function FeedPage() {
           initialNextCursor={nextCursor}
           initialUserReactions={userReactions}
           currentUserId={session.userId}
+          user={session}
         />
       </main>
     </div>
