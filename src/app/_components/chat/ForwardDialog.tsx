@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { X, Search, SendHorizontal } from "lucide-react";
 import Image from "next/image";
-import { api } from "~/trpc/react";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
 
 interface ForwardDialogProps {
   isOpen: boolean;
@@ -19,19 +21,20 @@ export function ForwardDialog({
   currentUserId,
 }: ForwardDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: conversations, isLoading } = api.chat.getConversations.useQuery(
-    {
-      limit: 20,
-    },
-  );
+  const conversations = useQuery(api.chat.getConversations, {
+    currentUserId: currentUserId as Id<"users">,
+    paginationOpts: { numItems: 20, cursor: null },
+  });
+
+  const isLoading = conversations === undefined;
 
   const filteredConversations =
-    conversations?.conversations.filter((conv) => {
+    (conversations ?? []).filter((conv: any) => {
       if (!searchQuery) return true;
       const name =
         conv.type === "group"
           ? conv.name
-          : conv.participants.find((p) => p.id !== currentUserId)?.name;
+          : conv.participants?.find((p: any) => p.id !== currentUserId)?.name;
 
       return name?.toLowerCase().includes(searchQuery.toLowerCase());
     }) ?? [];
@@ -82,9 +85,9 @@ export function ForwardDialog({
                 <p className="text-sm">لا توجد محادثات</p>
               </div>
             ) : (
-              filteredConversations.map((conv) => {
-                const otherParticipant = conv.participants.find(
-                  (p) => p.id !== currentUserId,
+              filteredConversations.map((conv: any) => {
+                const otherParticipant = conv.participants?.find(
+                  (p: any) => p.id !== currentUserId,
                 );
                 const displayName =
                   conv.type === "group"
@@ -97,8 +100,8 @@ export function ForwardDialog({
 
                 return (
                   <button
-                    key={conv.id}
-                    onClick={() => onForward(conv.id)}
+                    key={conv._id}
+                    onClick={() => onForward(conv._id)}
                     className="flex w-full items-center justify-between rounded-xl border border-transparent p-3 transition-colors hover:border-white/10 hover:bg-white/5"
                   >
                     <div className="flex items-center gap-3">

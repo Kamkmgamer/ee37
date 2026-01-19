@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { X, Search, Check } from "lucide-react";
 import Image from "next/image";
-import { api } from "~/trpc/react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 
 interface NewChatDialogProps {
@@ -15,33 +17,30 @@ interface NewChatDialogProps {
 export function NewChatDialog({
   isOpen,
   onClose,
-  currentUserId: _currentUserId,
+  currentUserId,
 }: NewChatDialogProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [isGroup, setIsGroup] = useState(false);
   const [groupName, setGroupName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
-  const { data: users, isLoading: isSearching } = api.chat.searchUsers.useQuery(
-    { query: searchQuery },
-    { enabled: searchQuery.length > 0 },
+  const usersData = useQuery(
+    api.chat.searchUsers,
+    searchQuery.length > 0
+      ? { query: searchQuery, currentUserId: currentUserId as Id<"users"> }
+      : "skip",
   );
 
-  const createConversationMutation = api.chat.createConversation.useMutation({
-    onSuccess: (data) => {
-      onClose();
-      router.push(`/chat?c=${data.conversationId}`);
-      setSelectedUsers([]);
-      setGroupName("");
-      setSearchQuery("");
-      setIsGroup(false);
-    },
-  });
+  const isSearching = usersData === undefined && searchQuery.length > 0;
+  const users = usersData ?? [];
+
+  const createConversationMutation = useMutation(api.chat.createConversation);
 
   if (!isOpen) return null;
 
-  const handleUserSelect = (userId: string) => {
+  const handleUserSelect = async (userId: string) => {
     if (isGroup) {
       setSelectedUsers((prev) =>
         prev.includes(userId)
@@ -50,21 +49,47 @@ export function NewChatDialog({
       );
     } else {
       // For private chat, select one and create immediately
-      createConversationMutation.mutate({
-        type: "private",
-        participantIds: [userId],
-      });
+      setIsCreating(true);
+      try {
+        const conversationId = await createConversationMutation({
+          type: "private",
+          participantIds: [userId as Id<"users">, currentUserId as Id<"users">],
+          currentUserId: currentUserId as Id<"users">,
+        });
+        onClose();
+        router.push(`/chat?c=${conversationId}`);
+        setSelectedUsers([]);
+        setGroupName("");
+        setSearchQuery("");
+        setIsGroup(false);
+      } finally {
+        setIsCreating(false);
+      }
     }
   };
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     if (!groupName || selectedUsers.length === 0) return;
 
-    createConversationMutation.mutate({
-      type: "group",
-      participantIds: selectedUsers,
-      name: groupName,
-    });
+    setIsCreating(true);
+    try {
+      const conversationId = await createConversationMutation({
+        type: "group",
+        participantIds: [...selectedUsers, currentUserId].map(
+          (id) => id as Id<"users">,
+        ),
+        name: groupName,
+        currentUserId: currentUserId as Id<"users">,
+      });
+      onClose();
+      router.push(`/chat?c=${conversationId}`);
+      setSelectedUsers([]);
+      setGroupName("");
+      setSearchQuery("");
+      setIsGroup(false);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -161,12 +186,12 @@ export function NewChatDialog({
               </div>
             )}
 
-            {users?.map((user) => (
+            {users.map((user: any) => (
               <button
-                key={user.id}
-                onClick={() => handleUserSelect(user.id)}
+                key={user._id}
+                onClick={() => handleUserSelect(user._id)}
                 className={`flex w-full items-center justify-between rounded-xl p-3 transition-colors ${
-                  selectedUsers.includes(user.id)
+                  selectedUsers.includes(user._id)
                     ? "border border-[#D4AF37]/50 bg-[#D4AF37]/20"
                     : "border border-transparent hover:bg-white/5"
                 }`}
@@ -191,7 +216,7 @@ export function NewChatDialog({
                     <p className="text-xs text-[#A0A0A0]">{user.collegeId}</p>
                   </div>
                 </div>
-                {selectedUsers.includes(user.id) && (
+                {selectedUsers.includes(user._id) && (
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#D4AF37] text-black">
                     <Check size={14} />
                   </div>
@@ -206,16 +231,10 @@ export function NewChatDialog({
           <div className="border-t border-white/10 p-4">
             <button
               onClick={handleCreateGroup}
-              disabled={
-                !groupName ||
-                selectedUsers.length === 0 ||
-                createConversationMutation.isPending
-              }
+              disabled={!groupName || selectedUsers.length === 0 || isCreating}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#D4AF37] py-3 font-bold text-black transition-all hover:bg-[#C5A028] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {createConversationMutation.isPending
-                ? "جاري الإنشاء..."
-                : "إنشاء المجموعة"}
+              {isCreating ? "جاري الإنشاء..." : "إنشاء المجموعة"}
             </button>
           </div>
         )}
