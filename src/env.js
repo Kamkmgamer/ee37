@@ -17,6 +17,7 @@ export const env = createEnv({
       .default("super-secret-default-key-change-in-prod"),
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().email().default("noreply@ee37.com"),
+    INTERNAL_API_KEY: z.string().min(1),
   },
 
   /**
@@ -38,6 +39,7 @@ export const env = createEnv({
     JWT_SECRET: process.env.JWT_SECRET,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     EMAIL_FROM: process.env.EMAIL_FROM,
+    INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,
 
     NEXT_PUBLIC_URL: process.env.NEXT_PUBLIC_URL,
 
