@@ -6,7 +6,7 @@
   "author": "Khalil Abdalmajeed Khalil",
   "type": "module",
   "scripts": {
-    "build": "next build",
+    "build": "next build --turbo",
     "check": "next lint && tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
