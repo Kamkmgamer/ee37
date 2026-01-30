@@ -1,49 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 "use client";
 
-import { useState, useEffect } from "react";
-import { useMutation } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
+import { useState } from "react";
 import { ArrowRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { ChatListReady } from "./ChatListReady";
+import { NewChatDialog } from "./NewChatDialog";
 
 interface ChatListProps {
   userId: string;
-  user: {
-    userId: string;
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-    collegeId?: string;
-  } | null;
 }
 
-export function ChatList({ userId, user }: ChatListProps) {
-  const [isSynced, setIsSynced] = useState(false);
+export function ChatList({ userId }: ChatListProps) {
+  const [showNewChat, setShowNewChat] = useState(false);
 
-  const syncUser = useMutation(api.users.syncUser);
-
-  useEffect(() => {
-    if (user && userId) {
-      void (async () => {
-        await syncUser({
-          externalId: user.userId,
-          name: user.name ?? undefined,
-          email: user.email ?? undefined,
-          avatarUrl: user.image ?? undefined,
-          collegeId: (user as any).collegeId,
-        });
-        setIsSynced(true);
-      })();
-    }
-  }, [user, userId, syncUser]);
-
-  if (!isSynced) {
-    return (
+  return (
+    <>
       <div className="flex h-full flex-col">
-        {/* Header placeholder */}
+        {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 p-4">
           <div className="flex items-center gap-3">
             <Link
@@ -54,18 +28,26 @@ export function ChatList({ userId, user }: ChatListProps) {
             </Link>
             <h2 className="text-xl font-bold text-[#EAEAEA]">المحادثات</h2>
           </div>
-          <button className="flex h-8 w-8 items-center justify-center rounded-full bg-[#D4AF37] text-black transition-colors hover:bg-[#C5A028]">
+          <button
+            onClick={() => setShowNewChat(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#D4AF37] text-black transition-colors hover:bg-[#C5A028]"
+          >
             <Plus size={20} />
           </button>
         </div>
 
-        {/* Loading spinner */}
-        <div className="flex flex-1 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#D4AF37] border-t-transparent" />
+        {/* Chat List Content */}
+        <div className="flex-1 overflow-hidden">
+          <ChatListReady userId={userId} />
         </div>
       </div>
-    );
-  }
 
-  return <ChatListReady userId={userId} />;
+      {/* New Chat Dialog */}
+      <NewChatDialog
+        isOpen={showNewChat}
+        currentUserId={userId}
+        onClose={() => setShowNewChat(false)}
+      />
+    </>
+  );
 }

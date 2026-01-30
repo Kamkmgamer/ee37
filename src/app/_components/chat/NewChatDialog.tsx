@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { X, Search, Check } from "lucide-react";
 import Image from "next/image";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
+import { useMutation } from "convex/react";
+import { api as convexApi } from "../../../../convex/_generated/api";
+import { api as trpcApi } from "~/trpc/react";
 import { useRouter } from "next/navigation";
 
 interface NewChatDialogProps {
@@ -26,17 +26,19 @@ export function NewChatDialog({
   const [groupName, setGroupName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  const usersData = useQuery(
-    api.chat.searchUsers,
-    searchQuery.length > 0
-      ? { query: searchQuery, currentUserId: currentUserId as Id<"users"> }
-      : "skip",
+  // Use tRPC for searching users
+  const { data: searchResults, isLoading: isSearching } =
+    trpcApi.chat.searchUsers.useQuery(
+      { query: searchQuery },
+      { enabled: searchQuery.length > 0 },
+    );
+
+  const users = searchResults?.users ?? [];
+
+  // Use Convex mutation for creating conversations
+  const createConversationMutation = useMutation(
+    convexApi.chat.createConversation,
   );
-
-  const isSearching = usersData === undefined && searchQuery.length > 0;
-  const users = usersData ?? [];
-
-  const createConversationMutation = useMutation(api.chat.createConversation);
 
   if (!isOpen) return null;
 
@@ -53,8 +55,8 @@ export function NewChatDialog({
       try {
         const conversationId = await createConversationMutation({
           type: "private",
-          participantIds: [userId as Id<"users">, currentUserId as Id<"users">],
-          currentUserId: currentUserId as Id<"users">,
+          participantIds: [userId, currentUserId],
+          currentUserId: currentUserId,
         });
         onClose();
         router.push(`/chat?c=${conversationId}`);
@@ -75,11 +77,9 @@ export function NewChatDialog({
     try {
       const conversationId = await createConversationMutation({
         type: "group",
-        participantIds: [...selectedUsers, currentUserId].map(
-          (id) => id as Id<"users">,
-        ),
+        participantIds: [...selectedUsers, currentUserId],
         name: groupName,
-        currentUserId: currentUserId as Id<"users">,
+        currentUserId: currentUserId,
       });
       onClose();
       router.push(`/chat?c=${conversationId}`);
@@ -186,12 +186,12 @@ export function NewChatDialog({
               </div>
             )}
 
-            {users.map((user: any) => (
+            {users.map((user) => (
               <button
-                key={user._id}
-                onClick={() => handleUserSelect(user._id)}
+                key={user.id}
+                onClick={() => handleUserSelect(user.id)}
                 className={`flex w-full items-center justify-between rounded-xl p-3 transition-colors ${
-                  selectedUsers.includes(user._id)
+                  selectedUsers.includes(user.id)
                     ? "border border-[#D4AF37]/50 bg-[#D4AF37]/20"
                     : "border border-transparent hover:bg-white/5"
                 }`}
@@ -216,7 +216,7 @@ export function NewChatDialog({
                     <p className="text-xs text-[#A0A0A0]">{user.collegeId}</p>
                   </div>
                 </div>
-                {selectedUsers.includes(user._id) && (
+                {selectedUsers.includes(user.id) && (
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#D4AF37] text-black">
                     <Check size={14} />
                   </div>

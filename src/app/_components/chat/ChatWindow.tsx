@@ -3,9 +3,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { MessageCircle, Phone, Video, Info, ArrowRight } from "lucide-react";
-import { useQuery, useMutation } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import { MessageContextMenu } from "./MessageContextMenu";
@@ -43,26 +42,37 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
   });
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
 
+  // Data state
+  const [conversation, setConversation] = useState<any>(undefined);
+  const [messagesData, setMessagesData] = useState<any>(undefined);
+
   // Fetch Conversation Details
-  const conversation = useQuery(
-    api.chat.getConversation,
-    conversationId
-      ? { conversationId: conversationId as Id<"conversations"> }
-      : "skip",
-  );
-  const isConvLoading = conversation === undefined;
+  const getConversationAction = useAction(api.chat.getConversation);
+
+  useEffect(() => {
+    if (conversationId) {
+      getConversationAction({ conversationId }).then(setConversation);
+    } else {
+      setConversation(undefined);
+    }
+  }, [conversationId]);
 
   // Fetch Messages
-  const messagesData = useQuery(
-    api.chat.getMessages,
-    conversationId
-      ? {
-          conversationId: conversationId as Id<"conversations">,
-          currentUserId: currentUserId as Id<"users">,
-          paginationOpts: { numItems: 50, cursor: null },
-        }
-      : "skip",
-  );
+  const getMessagesAction = useAction(api.chat.getMessages);
+
+  useEffect(() => {
+    if (conversationId) {
+      getMessagesAction({
+        conversationId,
+        currentUserId,
+        paginationOpts: { numItems: 50, cursor: null },
+      }).then(setMessagesData);
+    } else {
+      setMessagesData(undefined);
+    }
+  }, [conversationId, currentUserId]);
+
+  const isConvLoading = conversation === undefined;
   const isMessagesLoading = messagesData === undefined;
 
   const sendMessageMutation = useMutation(api.chat.sendMessage);
@@ -146,11 +156,11 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
     setIsSending(true);
     try {
       await sendMessageMutation({
-        conversationId: conversationId as Id<"conversations">,
+        conversationId,
         content,
-        media: mediaUrls, // Convex expects { url, type } which matches
-        replyToId: replyingTo ? (replyingTo.id as Id<"messages">) : undefined,
-        currentUserId: currentUserId as Id<"users">,
+        media: mediaUrls,
+        replyToId: replyingTo ? replyingTo.id : undefined,
+        currentUserId,
         isForwarded: false,
       });
       setReplyingTo(null);
@@ -162,7 +172,7 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
   const handleEditMessage = async (content: string) => {
     if (!editingMessage) return;
     await editMessageMutation({
-      messageId: editingMessage.id as Id<"messages">,
+      messageId: editingMessage.id,
       content,
     });
     setEditingMessage(null);
@@ -177,10 +187,10 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
     if (!forwardingMessage) return;
 
     await sendMessageMutation({
-      conversationId: targetConversationId as Id<"conversations">,
+      conversationId: targetConversationId,
       content: forwardingMessage.content ?? "",
       media: forwardingMessage.media as any,
-      currentUserId: currentUserId as Id<"users">,
+      currentUserId,
       isForwarded: true,
     });
 
@@ -190,23 +200,23 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
 
   const handleReact = (messageId: string, type: string) => {
     reactMutation({
-      messageId: messageId as Id<"messages">,
+      messageId,
       type,
-      currentUserId: currentUserId as Id<"users">,
+      currentUserId,
     });
   };
 
   const handleDeleteForMe = (messageId: string) => {
     deleteForMeMutation({
-      messageId: messageId as Id<"messages">,
-      currentUserId: currentUserId as Id<"users">,
+      messageId,
+      currentUserId,
     });
   };
 
   const handleDeleteForAll = (messageId: string) => {
     deleteForAllMutation({
-      messageId: messageId as Id<"messages">,
-      currentUserId: currentUserId as Id<"users">,
+      messageId,
+      currentUserId,
     });
   };
 

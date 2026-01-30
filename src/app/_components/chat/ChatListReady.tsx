@@ -4,12 +4,12 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
 import { Search, Plus, Users, User, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { ConversationItem } from "./ConversationItem";
 import { NewChatDialog } from "./NewChatDialog";
 import { useRouter } from "next/navigation";
+import { AI_USER_ID } from "~/lib/constants";
 
 interface ChatListReadyProps {
   userId: string;
@@ -26,23 +26,21 @@ export function ChatListReady({ userId }: ChatListReadyProps) {
 
   // All hooks now called unconditionally at the top level
   const conversations = useQuery(api.chat.getConversations as any, {
-    currentUserId: userId as Id<"users">,
+    currentUserId: userId,
     paginationOpts: { numItems: 20, cursor: null },
   });
 
   const isLoading = conversations === undefined;
 
-  const aiUser = useQuery(api.chat.getAIUser);
   const createConversation = useMutation(api.chat.createConversation);
 
   const handleStartAIChat = async () => {
-    if (!aiUser) return;
     setIsCreatingChat(true);
     try {
       const conversationId = await createConversation({
         type: "private",
-        participantIds: [aiUser._id, userId as Id<"users">],
-        currentUserId: userId as Id<"users">,
+        participantIds: [AI_USER_ID, userId],
+        currentUserId: userId,
       });
       router.push(`/chat?c=${conversationId}`);
     } finally {
@@ -69,12 +67,6 @@ export function ChatListReady({ userId }: ChatListReadyProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <NewChatDialog
-        isOpen={isNewChatOpen}
-        onClose={() => setIsNewChatOpen(false)}
-        currentUserId={userId}
-      />
-
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/10 p-4">
         <div className="flex items-center gap-3">
