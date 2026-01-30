@@ -3,13 +3,17 @@ import { v } from "convex/values";
 import {
   mutation,
   query,
+  action,
   internalMutation,
   internalQuery,
 } from "./_generated/server";
-import { paginationOptsValidator } from "convex/server";
+import { paginationOptsValidator, PaginationResult } from "convex/server";
 import { api } from "./_generated/api";
-import { resolveUserId } from "./users";
 import type { Id } from "./_generated/dataModel";
+
+// ============================================================================
+// MUTATIONS - Basic chat operations that don't need user data enrichment
+// ============================================================================
 
 export const createConversation = mutation({
   args: {
@@ -19,11 +23,9 @@ export const createConversation = mutation({
     avatarUrl: v.optional(v.string()),
     currentUserId: v.string(),
   },
-  handler: async (ctx, args) => {
-    const currentUserId = await resolveUserId(ctx, args.currentUserId);
-    const participantIds = await Promise.all(
-      args.participantIds.map((id) => resolveUserId(ctx, id)),
-    );
+  handler: async (ctx, args): Promise<Id<"conversations">> => {
+    const currentUserId = args.currentUserId;
+    const participantIds = args.participantIds;
 
     // Basic validation
     if (!participantIds.includes(currentUserId)) {
@@ -83,7 +85,8 @@ export const createConversation = mutation({
   },
 });
 
-export const sendMessage = mutation({
+// Internal mutation that does the actual message insertion
+export const sendMessageInternal = internalMutation({
   args: {
     conversationId: v.id("conversations"),
     content: v.optional(v.string()),
@@ -99,8 +102,8 @@ export const sendMessage = mutation({
     isForwarded: v.boolean(),
     currentUserId: v.string(),
   },
-  handler: async (ctx, args) => {
-    const currentUserId = await resolveUserId(ctx, args.currentUserId);
+  handler: async (ctx, args): Promise<Id<"messages">> => {
+    const currentUserId = args.currentUserId;
 
     // Verify participant
     const participant = await ctx.db
@@ -128,29 +131,69 @@ export const sendMessage = mutation({
 
     await ctx.db.patch(args.conversationId, { updatedAt: Date.now() });
 
-    // AI Check
-    const participants = await ctx.db
-      .query("conversationParticipants")
-      .withIndex("by_conversationId", (q) =>
-        q.eq("conversationId", args.conversationId),
-      )
-      .collect();
+    return messageId;
+  },
+});
 
-    let aiUser = null;
-    for (const p of participants) {
-      const user = await ctx.db.get(p.userId);
-      if (user && user.email === "ai@ee37.platform") {
-        aiUser = user;
-        break;
-      }
-    }
-
-    if (aiUser) {
-      // Schedule AI response
-      await ctx.scheduler.runAfter(0, api.ai.generateResponse, {
+// Public action wrapper that handles AI detection
+export const sendMessage = action({
+  args: {
+    conversationId: v.id("conversations"),
+    content: v.optional(v.string()),
+    media: v.optional(
+      v.array(
+        v.object({
+          url: v.string(),
+          type: v.union(v.literal("image"), v.literal("video")),
+        }),
+      ),
+    ),
+    replyToId: v.optional(v.id("messages")),
+    isForwarded: v.boolean(),
+    currentUserId: v.string(),
+  },
+  handler: async (ctx, args): Promise<Id<"messages">> => {
+    // Call internal mutation via API
+    const messageId = await ctx.runMutation(
+      api.internal.chat.sendMessageInternal,
+      {
         conversationId: args.conversationId,
-        replyToMessageId: messageId,
+        content: args.content,
+        media: args.media,
+        replyToId: args.replyToId,
+        isForwarded: args.isForwarded,
+        currentUserId: args.currentUserId,
+      },
+    );
+
+    // Get participants via query
+    const participants = await ctx.runQuery(
+      api.chat.getConversationParticipants,
+      {
+        conversationId: args.conversationId,
+      },
+    );
+
+    const participantIds = participants.map(
+      (p: { userId: string }) => p.userId,
+    );
+
+    if (participantIds.length > 0) {
+      const userData = await ctx.runAction(api.users.getUsersByIds, {
+        userIds: participantIds,
       });
+
+      const aiUser = userData.find(
+        (u: { email: string }) => u.email === "ai@ee37.platform",
+      );
+
+      if (aiUser) {
+        // Schedule AI response
+        await ctx.scheduler.runAfter(0, api.ai.generateResponse, {
+          conversationId: args.conversationId,
+          replyToMessageId: messageId,
+        });
+      }
     }
 
     return messageId;
@@ -161,22 +204,12 @@ export const sendAIMessage = internalMutation({
   args: {
     conversationId: v.id("conversations"),
     content: v.string(),
+    aiUserId: v.string(),
   },
-  handler: async (ctx, args) => {
-    // Find AI User
-    const aiUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", "ai@ee37.platform"))
-      .unique();
-
-    if (!aiUser) {
-      console.error("AI user not found");
-      return;
-    }
-
+  handler: async (ctx, args): Promise<void> => {
     await ctx.db.insert("messages", {
       conversationId: args.conversationId,
-      senderId: aiUser._id,
+      senderId: args.aiUserId,
       content: args.content,
       media: [],
       isForwarded: false,
@@ -189,13 +222,129 @@ export const sendAIMessage = internalMutation({
   },
 });
 
-export const getConversations = query({
+export const editMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+    content: v.string(),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    await ctx.db.patch(args.messageId, {
+      content: args.content,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const react = mutation({
+  args: {
+    messageId: v.id("messages"),
+    type: v.string(),
+    currentUserId: v.string(),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const currentUserId = args.currentUserId;
+    const existing = await ctx.db
+      .query("messageReactions")
+      .withIndex("by_messageId", (q) => q.eq("messageId", args.messageId))
+      .filter((q) => q.eq(q.field("userId"), currentUserId))
+      .unique();
+
+    if (existing) {
+      if (existing.reactionType === args.type) {
+        await ctx.db.delete(existing._id);
+      } else {
+        await ctx.db.patch(existing._id, { reactionType: args.type as any });
+      }
+    } else {
+      await ctx.db.insert("messageReactions", {
+        messageId: args.messageId,
+        userId: currentUserId,
+        reactionType: args.type as any,
+        createdAt: Date.now(),
+      });
+    }
+  },
+});
+
+export const deleteMessageForMe = mutation({
+  args: {
+    messageId: v.id("messages"),
+    currentUserId: v.string(),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const currentUserId = args.currentUserId;
+    const msg = await ctx.db.get(args.messageId);
+    if (!msg) return;
+    const deletedFor = msg.deletedForUserIds || [];
+    if (!deletedFor.includes(currentUserId)) {
+      await ctx.db.patch(args.messageId, {
+        deletedForUserIds: [...deletedFor, currentUserId],
+      });
+    }
+  },
+});
+
+export const deleteMessageForAll = mutation({
+  args: {
+    messageId: v.id("messages"),
+    currentUserId: v.string(),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    await ctx.db.patch(args.messageId, {
+      deletedAt: Date.now(),
+      content: undefined,
+      media: [],
+    });
+  },
+});
+
+export const markAsRead = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    currentUserId: v.string(),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const currentUserId = args.currentUserId;
+    const p = await ctx.db
+      .query("conversationParticipants")
+      .withIndex("by_conversation_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", currentUserId),
+      )
+      .unique();
+
+    if (p) {
+      await ctx.db.patch(p._id, { lastReadAt: Date.now() });
+    }
+  },
+});
+
+// ============================================================================
+// QUERIES - Raw data without user enrichment (client fetches user data separately)
+// ============================================================================
+
+// Helper query to get conversation participants
+export const getConversationParticipants = query({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("conversationParticipants")
+      .withIndex("by_conversationId", (q) =>
+        q.eq("conversationId", args.conversationId),
+      )
+      .collect();
+  },
+});
+
+// Raw conversation data without user enrichment
+export const getConversationsRaw = query({
   args: {
     currentUserId: v.string(),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const currentUserId = await resolveUserId(ctx, args.currentUserId);
+    const currentUserId = args.currentUserId;
     const allParticipations = await ctx.db
       .query("conversationParticipants")
       .withIndex("by_userId", (q) => q.eq("userId", currentUserId))
@@ -215,8 +364,8 @@ export const getConversations = query({
       (a, b) => (b!.updatedAt || 0) - (a!.updatedAt || 0),
     );
 
-    // Enrich
-    const enriched = await Promise.all(
+    // Return raw data with participant IDs only (no user enrichment)
+    const result = await Promise.all(
       sortedConvs.map(async (c) => {
         const lastMsg = await ctx.db
           .query("messages")
@@ -243,71 +392,155 @@ export const getConversations = query({
                 .collect()
             ).length;
 
+        const participantRecords = await ctx.db
+          .query("conversationParticipants")
+          .withIndex("by_conversationId", (q) => q.eq("conversationId", c!._id))
+          .collect();
+
         return {
           ...c,
           lastMessage: lastMsg,
           unreadCount: unreadCount,
-          participants: (
-            await Promise.all(
-              (
-                await ctx.db
-                  .query("conversationParticipants")
-                  .withIndex("by_conversationId", (q) =>
-                    q.eq("conversationId", c!._id),
-                  )
-                  .collect()
-              ).map(async (p) => {
-                const u = await ctx.db.get(p.userId);
-                return u
-                  ? { id: u._id, name: u.name, avatarUrl: u.avatarUrl }
-                  : null;
-              }),
-            )
-          ).filter((u) => u !== null),
+          participantIds: participantRecords.map((p) => p.userId),
         };
       }),
     );
 
-    return enriched;
+    return result;
   },
 });
 
-export const getConversation = query({
+// Action wrapper that enriches with user data
+export const getConversations = action({
+  args: {
+    currentUserId: v.string(),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args): Promise<any[]> => {
+    // Get raw conversations
+    const rawConversations: Array<any> = await ctx.runQuery(
+      api.chat.getConversationsRaw,
+      {
+        currentUserId: args.currentUserId,
+        paginationOpts: args.paginationOpts,
+      },
+    );
+
+    // Collect all unique participant IDs
+    const allParticipantIds: string[] = [];
+    for (const c of rawConversations) {
+      for (const userId of c.participantIds) {
+        if (!allParticipantIds.includes(userId)) {
+          allParticipantIds.push(userId);
+        }
+      }
+    }
+
+    // Fetch user data from PostgreSQL
+    const userDataMap = new Map<
+      string,
+      { id: string; name: string; avatarUrl: string | null }
+    >();
+    if (allParticipantIds.length > 0) {
+      const userData: Array<{
+        id: string;
+        name: string;
+        avatarUrl: string | null;
+      }> = await ctx.runAction(api.users.getUsersByIds, {
+        userIds: allParticipantIds,
+      });
+      for (const u of userData) {
+        userDataMap.set(u.id, {
+          id: u.id,
+          name: u.name,
+          avatarUrl: u.avatarUrl,
+        });
+      }
+    }
+
+    // Enrich conversations with user data
+    return rawConversations.map((c: any) => ({
+      ...c,
+      participants: c.participantIds
+        .map((id: string) => userDataMap.get(id))
+        .filter((u: any) => u !== undefined),
+      participantIds: undefined,
+    }));
+  },
+});
+
+// Raw conversation data without user enrichment
+export const getConversationRaw = query({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
     const conversation = await ctx.db.get(args.conversationId);
     if (!conversation) return null;
 
-    const participants = await Promise.all(
-      (
-        await ctx.db
-          .query("conversationParticipants")
-          .withIndex("by_conversationId", (q) =>
-            q.eq("conversationId", args.conversationId),
-          )
-          .collect()
-      ).map(async (p) => {
-        const u = await ctx.db.get(p.userId);
-        return u ? { id: u._id, name: u.name, avatarUrl: u.avatarUrl } : null;
-      }),
-    );
+    const participantRecords = await ctx.db
+      .query("conversationParticipants")
+      .withIndex("by_conversationId", (q) =>
+        q.eq("conversationId", args.conversationId),
+      )
+      .collect();
 
     return {
       ...conversation,
-      participants: participants.filter((p) => p !== null),
+      participantIds: participantRecords.map((p) => p.userId),
     };
   },
 });
 
-export const getMessages = query({
+// Action wrapper that enriches with user data
+export const getConversation = action({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args): Promise<any> => {
+    const rawConversation: any = await ctx.runQuery(
+      api.chat.getConversationRaw,
+      {
+        conversationId: args.conversationId,
+      },
+    );
+
+    if (!rawConversation) return null;
+
+    // Fetch user data from PostgreSQL
+    let participants: Array<{
+      id: string;
+      name: string;
+      avatarUrl: string | null;
+    }> = [];
+    if (rawConversation.participantIds.length > 0) {
+      const userData: Array<{
+        id: string;
+        name: string;
+        avatarUrl: string | null;
+      }> = await ctx.runAction(api.users.getUsersByIds, {
+        userIds: rawConversation.participantIds,
+      });
+      participants = userData.map((u) => ({
+        id: u.id,
+        name: u.name,
+        avatarUrl: u.avatarUrl,
+      }));
+    }
+
+    return {
+      ...rawConversation,
+      participants,
+      participantIds: undefined,
+    };
+  },
+});
+
+// Raw messages without user enrichment
+export const getMessagesRaw = query({
   args: {
     conversationId: v.id("conversations"),
     currentUserId: v.string(),
     paginationOpts: paginationOptsValidator,
   },
-  handler: async (ctx, args) => {
-    const currentUserId = await resolveUserId(ctx, args.currentUserId);
-    // Auth check
+  handler: async (ctx, args): Promise<PaginationResult<any>> => {
+    const currentUserId = args.currentUserId;
     const p = await ctx.db
       .query("conversationParticipants")
       .withIndex("by_conversation_user", (q) =>
@@ -324,22 +557,27 @@ export const getMessages = query({
       .order("desc")
       .paginate(args.paginationOpts);
 
-    // Enrich
-    const enrichedPage = await Promise.all(
+    // Return raw messages with sender IDs and replyToIds only
+    const page = await Promise.all(
       messages.page.map(async (m) => {
-        const sender = await ctx.db.get(m.senderId);
-        let replyTo = null;
+        let replyTo: {
+          messageId: string;
+          senderId: string;
+          content: string | null;
+          createdAt: number;
+        } | null = null;
         if (m.replyToId) {
           const replyMsg = await ctx.db.get(m.replyToId);
           if (replyMsg) {
-            const replySender = await ctx.db.get(replyMsg.senderId);
             replyTo = {
-              ...replyMsg,
-              sender: replySender,
+              messageId: replyMsg._id,
+              senderId: replyMsg.senderId,
+              content: replyMsg.content ?? null,
+              createdAt: replyMsg.createdAt,
             };
           }
         }
-        // Reactions
+
         const reactions = await ctx.db
           .query("messageReactions")
           .withIndex("by_messageId", (q) => q.eq("messageId", m._id))
@@ -347,147 +585,82 @@ export const getMessages = query({
 
         return {
           ...m,
-          sender,
           replyTo,
           reactions,
         };
       }),
     );
 
-    return { ...messages, page: enrichedPage };
+    return { ...messages, page };
   },
 });
 
-export const editMessage = mutation({
-  args: {
-    messageId: v.id("messages"),
-    content: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.messageId, {
-      content: args.content,
-      updatedAt: Date.now(),
-    });
-  },
-});
-
-export const react = mutation({
-  args: {
-    messageId: v.id("messages"),
-    type: v.string(), // "like" | "dislike" etc
-    currentUserId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const currentUserId = await resolveUserId(ctx, args.currentUserId);
-    // Check existing reaction
-    const existing = await ctx.db
-      .query("messageReactions")
-      .withIndex("by_messageId", (q) => q.eq("messageId", args.messageId))
-      .filter((q) => q.eq(q.field("userId"), currentUserId))
-      .unique();
-
-    if (existing) {
-      if (existing.reactionType === args.type) {
-        // Toggle off
-        await ctx.db.delete(existing._id as Id<any>);
-      } else {
-        // Update
-        await ctx.db.patch(existing._id, { reactionType: args.type as any });
-      }
-    } else {
-      // Create
-      await ctx.db.insert("messageReactions", {
-        messageId: args.messageId,
-        userId: currentUserId,
-        reactionType: args.type as any,
-        createdAt: Date.now(),
-      });
-    }
-  },
-});
-
-export const deleteMessageForMe = mutation({
-  args: {
-    messageId: v.id("messages"),
-    currentUserId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const currentUserId = await resolveUserId(ctx, args.currentUserId);
-    const msg = await ctx.db.get(args.messageId);
-    if (!msg) return;
-    const deletedFor = msg.deletedForUserIds || [];
-    if (!deletedFor.includes(currentUserId)) {
-      await ctx.db.patch(args.messageId, {
-        deletedForUserIds: [...deletedFor, currentUserId],
-      });
-    }
-  },
-});
-
-export const deleteMessageForAll = mutation({
-  args: {
-    messageId: v.id("messages"),
-    currentUserId: v.string(), // For auth check ideally
-  },
-  handler: async (ctx, args) => {
-    // In a real app check if user is sender or admin
-    await ctx.db.patch(args.messageId, {
-      deletedAt: Date.now(),
-      content: undefined,
-      media: [],
-    });
-  },
-});
-
-export const markAsRead = mutation({
+// Action wrapper that enriches with user data
+export const getMessages = action({
   args: {
     conversationId: v.id("conversations"),
     currentUserId: v.string(),
+    paginationOpts: paginationOptsValidator,
   },
-  handler: async (ctx, args) => {
-    const currentUserId = await resolveUserId(ctx, args.currentUserId);
-    const p = await ctx.db
-      .query("conversationParticipants")
-      .withIndex("by_conversation_user", (q) =>
-        q.eq("conversationId", args.conversationId).eq("userId", currentUserId),
-      )
-      .unique();
+  handler: async (ctx, args): Promise<any> => {
+    const rawMessages: any = await ctx.runQuery(api.chat.getMessagesRaw, {
+      conversationId: args.conversationId,
+      currentUserId: args.currentUserId,
+      paginationOpts: args.paginationOpts,
+    });
 
-    if (p) {
-      await ctx.db.patch(p._id, { lastReadAt: Date.now() });
+    // Collect all sender IDs
+    const senderIds: string[] = [];
+    for (const m of rawMessages.page) {
+      if (!senderIds.includes(m.senderId)) {
+        senderIds.push(m.senderId);
+      }
+      if (m.replyTo && !senderIds.includes(m.replyTo.senderId)) {
+        senderIds.push(m.replyTo.senderId);
+      }
     }
+
+    // Fetch user data from PostgreSQL
+    const userDataMap = new Map<
+      string,
+      { id: string; name: string; avatarUrl: string | null }
+    >();
+    if (senderIds.length > 0) {
+      const userData: Array<{
+        id: string;
+        name: string;
+        avatarUrl: string | null;
+      }> = await ctx.runAction(api.users.getUsersByIds, {
+        userIds: senderIds,
+      });
+      for (const u of userData) {
+        userDataMap.set(u.id, {
+          id: u.id,
+          name: u.name,
+          avatarUrl: u.avatarUrl,
+        });
+      }
+    }
+
+    // Enrich messages with user data
+    const enrichedPage = rawMessages.page.map((m: any) => ({
+      ...m,
+      sender: userDataMap.get(m.senderId),
+      replyTo: m.replyTo
+        ? {
+            ...m.replyTo,
+            sender: userDataMap.get(m.replyTo.senderId),
+          }
+        : null,
+    }));
+
+    return { ...rawMessages, page: enrichedPage };
   },
 });
 
-export const searchUsers = query({
-  args: {
-    query: v.string(),
-    currentUserId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const currentUserId = await resolveUserId(ctx, args.currentUserId);
-    if (!args.query) return [];
-    const users = await ctx.db.query("users").collect();
-    const lowerQ = args.query.toLowerCase();
-    return users
-      .filter(
-        (u) =>
-          u._id !== currentUserId &&
-          (u.name.toLowerCase().includes(lowerQ) ||
-            u.email.toLowerCase().includes(lowerQ)),
-      )
-      .slice(0, 20);
-  },
-});
-
-export const getAIUser = query({
-  handler: async (ctx) => {
-    return await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", "ai@ee37.platform"))
-      .unique();
-  },
-});
+// ============================================================================
+// INTERNAL QUERIES - For AI service
+// ============================================================================
 
 export const getRecentMessagesForAI = internalQuery({
   args: { conversationId: v.id("conversations") },
@@ -500,19 +673,55 @@ export const getRecentMessagesForAI = internalQuery({
       .order("desc")
       .take(20);
 
-    const enriched = await Promise.all(
-      messages.map(async (m) => {
-        const sender = await ctx.db.get(m.senderId);
-        return {
-          role:
-            sender?.email === "ai@ee37.platform"
-              ? ("assistant" as const)
-              : ("user" as const),
-          content: m.content || "",
-        };
-      }),
+    // Return raw data - AI service should use the action version to get enriched data
+    return messages.reverse().map((m) => ({
+      role: "user" as const,
+      content: m.content || "",
+      senderId: m.senderId,
+    }));
+  },
+});
+
+// Action version for AI that can fetch user data
+export const getRecentMessagesForAIAction = action({
+  args: { conversationId: v.id("conversations") },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<Array<{ role: "assistant" | "user"; content: string }>> => {
+    const messages: Array<any> = await ctx.runQuery(
+      api.chat.getRecentMessagesForAI,
+      {
+        conversationId: args.conversationId,
+      },
     );
 
-    return enriched.reverse();
+    // Collect all sender IDs
+    const senderIds: string[] = [];
+    for (const m of messages) {
+      if (!senderIds.includes(m.senderId)) {
+        senderIds.push(m.senderId);
+      }
+    }
+
+    // Fetch user data from PostgreSQL
+    const userDataMap = new Map<string, { email: string }>();
+    if (senderIds.length > 0) {
+      const userData: Array<{ id: string; email: string }> =
+        await ctx.runAction(api.users.getUsersByIds, {
+          userIds: senderIds,
+        });
+      for (const u of userData) {
+        userDataMap.set(u.id, { email: u.email });
+      }
+    }
+
+    return messages.map((m: any) => ({
+      role:
+        userDataMap.get(m.senderId)?.email === "ai@ee37.platform"
+          ? ("assistant" as const)
+          : ("user" as const),
+      content: m.content || "",
+    }));
   },
 });
