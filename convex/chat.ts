@@ -8,7 +8,7 @@ import {
   internalQuery,
 } from "./_generated/server";
 import { paginationOptsValidator, PaginationResult } from "convex/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 
 // ============================================================================
@@ -154,17 +154,14 @@ export const sendMessage = action({
   },
   handler: async (ctx, args): Promise<Id<"messages">> => {
     // Call internal mutation via API
-    const messageId = await ctx.runMutation(
-      api.internal.chat.sendMessageInternal,
-      {
-        conversationId: args.conversationId,
-        content: args.content,
-        media: args.media,
-        replyToId: args.replyToId,
-        isForwarded: args.isForwarded,
-        currentUserId: args.currentUserId,
-      },
-    );
+    const messageId = await ctx.runMutation(internal.chat.sendMessageInternal, {
+      conversationId: args.conversationId,
+      content: args.content,
+      media: args.media,
+      replyToId: args.replyToId,
+      isForwarded: args.isForwarded,
+      currentUserId: args.currentUserId,
+    });
 
     // Get participants via query
     const participants = await ctx.runQuery(
@@ -690,7 +687,7 @@ export const getRecentMessagesForAIAction = action({
     args,
   ): Promise<Array<{ role: "assistant" | "user"; content: string }>> => {
     const messages: Array<any> = await ctx.runQuery(
-      api.chat.getRecentMessagesForAI,
+      internal.chat.getRecentMessagesForAI,
       {
         conversationId: args.conversationId,
       },

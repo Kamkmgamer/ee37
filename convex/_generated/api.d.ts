@@ -9,10 +9,7 @@
  */
 
 import type * as ai from "../ai.js";
-import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
-import type * as comments from "../comments.js";
-import type * as posts from "../posts.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
 
@@ -24,10 +21,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   ai: typeof ai;
-  auth: typeof auth;
   chat: typeof chat;
-  comments: typeof comments;
-  posts: typeof posts;
   seed: typeof seed;
   users: typeof users;
 }>;

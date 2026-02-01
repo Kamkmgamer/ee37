@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { v } from "convex/values";
-import { action } from "./_generated/server";
+import { action, internalQuery } from "./_generated/server";
+import { api } from "./_generated/api";
 
 // Simple in-memory cache with 5-minute TTL
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -24,6 +26,20 @@ const userCache = new Map<string, CachedUser>();
 function isCacheValid(cachedUser: CachedUser): boolean {
   return Date.now() - cachedUser.cachedAt < CACHE_TTL;
 }
+
+/**
+ * Internal query to get AI user ID
+ */
+export const getAIUserId = internalQuery({
+  args: {},
+  handler: async (ctx): Promise<string | null> => {
+    const aiUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", "ai@ee37.platform"))
+      .first();
+    return aiUser ? aiUser._id : null;
+  },
+});
 
 /**
  * Fetch user data from PostgreSQL via internal API
@@ -124,6 +140,3 @@ export const getUserById = action({
     return users[0] || null;
   },
 });
-
-// Import api for recursive action calls
-import { api } from "./_generated/api";

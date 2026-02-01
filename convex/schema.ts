@@ -27,6 +27,22 @@ export const conversationType = v.union(
  * User IDs are PostgreSQL UUIDs (stored as strings).
  */
 export default defineSchema({
+  // Minimal users table for AI bot and synced users
+  users: defineTable({
+    name: v.string(),
+    email: v.string(),
+    externalId: v.optional(v.string()), // PostgreSQL UUID
+    avatarUrl: v.optional(v.string()),
+    collegeId: v.optional(v.string()),
+    password: v.optional(v.string()),
+    isAdmin: v.optional(v.boolean()),
+    emailVerified: v.optional(v.boolean()),
+    bio: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_email", ["email"])
+    .index("by_externalId", ["externalId"]),
+
   // Conversations (private chats and groups)
   conversations: defineTable({
     type: conversationType,

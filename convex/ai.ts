@@ -52,11 +52,16 @@ export const generateResponse = action({
       const responseContent = completion.choices[0]!.message.content;
 
       if (responseContent) {
-        // 5. Send response
-        await ctx.runMutation(internal.chat.sendAIMessage, {
-          conversationId: args.conversationId,
-          content: responseContent,
-        });
+        // 5. Find AI user and send response
+        const aiUserId = await ctx.runQuery(internal.users.getAIUserId, {});
+
+        if (aiUserId) {
+          await ctx.runMutation(internal.chat.sendAIMessage, {
+            conversationId: args.conversationId,
+            content: responseContent,
+            aiUserId: aiUserId,
+          });
+        }
       }
     } catch (error) {
       console.error("AI Generation failed:", error);
