@@ -21,12 +21,14 @@ export function ForwardDialog({
   currentUserId,
 }: ForwardDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const conversations = useQuery(api.chat.getConversations, {
+  // Using getConversationsRaw (query) instead of getConversations (action)
+  const conversationsData = useQuery(api.chat.getConversationsRaw as any, {
     currentUserId: currentUserId as Id<"users">,
     paginationOpts: { numItems: 20, cursor: null },
   });
 
-  const isLoading = conversations === undefined;
+  const isLoading = conversationsData === undefined;
+  const conversations = conversationsData?.page ?? [];
 
   const filteredConversations =
     (conversations ?? []).filter((conv: any) => {
