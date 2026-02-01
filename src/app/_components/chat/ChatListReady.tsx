@@ -25,12 +25,16 @@ export function ChatListReady({ userId }: ChatListReadyProps) {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
 
   // All hooks now called unconditionally at the top level
-  const conversations = useQuery(api.chat.getConversations as any, {
+  // Using getConversationsRaw (query) instead of getConversations (action)
+  const conversationsData = useQuery(api.chat.getConversationsRaw as any, {
     currentUserId: userId,
     paginationOpts: { numItems: 20, cursor: null },
   });
 
-  const isLoading = conversations === undefined;
+  const isLoading = conversationsData === undefined;
+
+  // Extract conversations from the paginated result
+  const conversations = conversationsData?.page ?? [];
 
   const createConversation = useMutation(api.chat.createConversation);
 
