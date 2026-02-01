@@ -75,7 +75,7 @@ export function ChatWindow({ currentUserId }: ChatWindowProps) {
   const isConvLoading = conversation === undefined;
   const isMessagesLoading = messagesData === undefined;
 
-  const sendMessageMutation = useMutation(api.chat.sendMessage);
+  const sendMessageMutation = useAction(api.chat.sendMessage);
   const editMessageMutation = useMutation(api.chat.editMessage);
   const reactMutation = useMutation(api.chat.react);
   const deleteForMeMutation = useMutation(api.chat.deleteMessageForMe);
